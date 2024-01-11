@@ -89,12 +89,42 @@ class Dataset(object):
 
         return train_data[:, min_perm], train_labels, min_perm, dist
 
+class WineDataset(Dataset):
+    """
+    Container for the Wine Dataset
+    """
+    def __init__(self, neg_labels = False, test_size = 0.0):
+        tmp_data = np.loadtxt("./datasets/wine.csv", delimiter=',')
+
+        for i in range(len(tmp_data)):
+            tmp_data[i,-1] = 1.0 if tmp_data[i,-1] == 1.0 else 0.0
+
+        self.raw_data = tmp_data
+
+        # Normalize
+        self.data = np.copy(tmp_data)
+        self.data -= np.min(self.data, axis=0)
+        self.data /= np.ptp(self.data, axis=0)
+
+        np.random.shuffle(self.data)
+
+        if neg_labels:
+            for i in range(len(self.data)):
+                self.data[i, -1] = self.data[i, -1] * 2 - 1
+
+        # Split to training and validation set
+        if test_size == 0.0:
+            self.train = self.data
+            self.test = np.array([])
+        else:
+            self.train, self.test = train_test_split(self.data, test_size=test_size)
+
 class ILPDDataset(Dataset):
     """
     Container for the ILDP dataset
     """
 
-    def __init__(self, neg_labels = False, test_size = 0.2):
+    def __init__(self, neg_labels = False, test_size = 0.0):
         tmp_data = arff.loadarff("./datasets/ilpd.arff")[0]
         tr_data = []
 
@@ -135,9 +165,45 @@ class ILPDDataset(Dataset):
         else:
             self.train, self.test = train_test_split(self.data, test_size=test_size)
 
+class BalancedILPDDataset(Dataset):
+    """
+    Version of ILPD dataset with balanced label amounts for testing
+    """
+    def __init__(self, test_size = 0.0):
+        tmp = ILPDDataset(neg_labels=True)
+        self.raw_data = tmp.raw_data
+
+        lab_1 = []
+        lab_2 = []
+
+        for i in range(len(tmp.data)):
+            if tmp.data[i,-1] == 1.0:
+                lab_1.append(tmp.data[i])
+            else:
+                lab_2.append(tmp.data[i])
+
+        num_vals = len(lab_1)
+
+        lab_2 = lab_2[:num_vals]
+
+        tmp_dat = lab_1 + lab_2
+
+        self.data = np.array(tmp_dat)
+        np.random.shuffle(self.data)
+
+        # Split to training and validation set
+        if test_size == 0.0:
+            self.train = self.data
+            self.test = np.array([])
+        else:
+            self.train, self.test = train_test_split(self.data, test_size=test_size)
+
+
+
 objective_func_vals = []
 min_objective_func_vals = []
 max_objective_func_vals = []
+
 
 #dataset = Dataset("./datasets/fertility_diagnosis.csv", test_size=0.0)
 dataset = ILPDDataset()
