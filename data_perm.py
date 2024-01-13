@@ -205,21 +205,11 @@ min_objective_func_vals = []
 max_objective_func_vals = []
 
 
-#dataset = Dataset("./datasets/fertility_diagnosis.csv", test_size=0.0)
-dataset = ILPDDataset()
-
-train_data, train_labels = dataset.get_separated_data()
-test_data, test_labels = dataset.get_separated_test_data()
-
-var_mat = np.abs(np.corrcoef(dataset.data[:,:-1], rowvar=False))
-
-max_perm, dist = solve(var_mat, maximize = True, linear = False)
-min_perm, dist = solve(var_mat, linear = False)
-
-max_train_data = train_data[:, max_perm]
-min_train_data = train_data[:, min_perm]
-
 obj_id = 0
+#dataset = Dataset("./datasets/fertility_diagnosis.csv", test_size=0.0)
+# dataset = ILPDDataset()
+
+
 
 def callback_graph(weights, obj_func_eval):
     print("epoch: {0}".format(len(objective_func_vals[obj_id])+1))
@@ -235,6 +225,18 @@ def min_callback_graph(weights, obj_func_eval):
 
 
 def train_qiskit_vqc():
+    dataset = WineDataset()
+
+    train_data, train_labels = dataset.get_separated_data()
+    test_data, test_labels = dataset.get_separated_test_data()
+
+    var_mat = np.abs(np.corrcoef(dataset.data[:,:-1], rowvar=False))
+
+    max_perm, dist = solve(var_mat, maximize = True, linear = False)
+    min_perm, dist = solve(var_mat, linear = False)
+
+    max_train_data = train_data[:, max_perm]
+    min_train_data = train_data[:, min_perm]
     feature_dim = len(train_data[0])
     entanglement = "circular"
     feature_reps = 3
@@ -306,77 +308,4 @@ def train_qiskit_vqc():
 
     plt.show()
 
-
-
-if __name__ == "__main__":
-    feature_dim = len(train_data[0])
-    entanglement = "circular"
-    feature_reps = 3
-    ansatz_reps = 3
-
-    figs, axes = plt.subplots(2)
-
-    axes[0].set_title("All objective function values")
-    axes[1].set_title("Mean objective function values")
-
-    for i in range(10):
-        objective_func_vals.append([])
-        min_objective_func_vals.append([])
-        max_objective_func_vals.append([])
-
-        obj_id = i
-
-        vqc = VQC(
-            num_qubits = feature_dim,
-            feature_map = ZFeatureMap(feature_dim, reps=feature_reps),
-            ansatz = EfficientSU2(feature_dim, reps=ansatz_reps, entanglement=entanglement),
-            loss = "cross_entropy",
-            optimizer = SPSA(maxiter=100),
-            callback = callback_graph
-        )
-
-        min_vqc = VQC(
-            num_qubits = feature_dim,
-            feature_map = ZFeatureMap(feature_dim, reps=feature_reps),
-            ansatz = EfficientSU2(feature_dim, reps=ansatz_reps, entanglement=entanglement),
-            loss = "cross_entropy",
-            optimizer = SPSA(maxiter=100),
-            callback = min_callback_graph
-        )
-
-        max_vqc = VQC(
-            num_qubits = feature_dim,
-            feature_map = ZFeatureMap(feature_dim, reps=feature_reps),
-            ansatz = EfficientSU2(feature_dim, reps=ansatz_reps, entanglement=entanglement),
-            loss = "cross_entropy",
-            optimizer = SPSA(maxiter=100),
-            callback = max_callback_graph
-        )
-
-        vqc.fit(train_data, train_labels)
-        score = vqc.score(min_train_data, train_labels)
-
-        max_vqc.fit(max_train_data, train_labels)
-        max_score = max_vqc.score(min_train_data, train_labels)
-
-        min_vqc.fit(min_train_data, train_labels)
-        min_score = min_vqc.score(min_train_data, train_labels)
-
-        axes[0].plot(range(len(objective_func_vals[i])), objective_func_vals[i], 'g', linewidth=0.5)
-        axes[0].plot(range(len(min_objective_func_vals[i])), min_objective_func_vals[i], 'r', linewidth=0.5)
-        axes[0].plot(range(len(max_objective_func_vals[i])), max_objective_func_vals[i], 'b', linewidth=0.5)
-
-        print(score)
-        print(max_score)
-        print(min_score)
-
-    avg_obj_val = np.mean(objective_func_vals, axis=0)
-    avg_obj_min_val = np.mean(min_objective_func_vals, axis=0)
-    avg_obj_max_val = np.mean(max_objective_func_vals, axis=0)
-
-    axes[1].plot(range(len(avg_obj_val)), avg_obj_val, 'g')
-    axes[1].plot(range(len(avg_obj_min_val)), avg_obj_min_val, 'r')
-    axes[1].plot(range(len(avg_obj_max_val)), avg_obj_max_val, 'b')
-
-    plt.show()
 
