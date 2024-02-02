@@ -6,7 +6,10 @@ TODO:
 - Finish the basic algorithm
 - implement Cross validation loss
 """
+import os
+import multiprocessing
 import pennylane as qml
+import time
 import jax
 import jax.numpy as jnp
 import json
@@ -18,10 +21,9 @@ from pennylane.templates import AngleEmbedding
 import matplotlib.pyplot as plt
 
 from tsp import solve
-from data_perm import WineDataset, Dataset, BalancedILPDDataset, ILPDDataset
+from data_perm import WineDataset, Dataset, BalancedILPDDataset, ILPDDataset, DiabetesDataset, HeartFailureDataset, Fertility, TransfusionDataset, TeachingAssistantDataset, HayesRothDataset, BanknoteDataset, AcuteInflammationsDataset, ImmunotherapyDataset
 
 import sys
-import os
 
 from ansatze import layer, rot_ansatz
 from feature_maps import zz_featuremap, z_featuremap, angle_embedding
@@ -31,27 +33,25 @@ class VQCModel(object):
     def __init__(self, dataset, params={}):
         self.dataset = dataset
         self.params = params
-        self.num_qubits = 10
-        self.num_layers = 4
         if params:
             self.feature_map = params['feature_map']
             self.ansatz = params['ansatz']
             self.learning_rate = params['learning_rate']
-            self.num_layers = params['num_layers']
             self.perm_mode = params['perm_mode']
             self.circular = params['circular']
             self.loss = params['loss']
-            self.num_qubits = params['num_qubits']
+        self.num_layers = params['num_layers'] if params and 'num_layers' in params else 4
+        self.num_qubits = params['num_qubits'] if params and 'num_qubits' in params else 10
         self.acc = []
         self.c = []
         self.weights = []
         self.bias = 0.0
-        self.dev = qml.device("default.qubit", wires = self.num_qubits, shots = 2 ** 10)
+        self.dev = qml.device("lightning.qubit", wires = self.num_qubits, shots = 2 ** 10, batch_obs=True)
         self.weights_init = 2.0 * np.pi * np.random.randn(self.num_layers, self.num_qubits*2, 3) if not 'weights_init' in params else params['weights_init']
         self.bias_init = 0.0 if not 'bias_init' in params else params['bias_init']
         self.loaded = False
 
-    def store_params(self, name='test'):
+    def store_params(self):
         params = self.params.copy()
         params['feature_map'] = params['feature_map'].__name__
         params['ansatz'] = params['ansatz'].__name__
@@ -63,12 +63,12 @@ class VQCModel(object):
         if not os.path.exists('params'):
             os.mkdir('params')
         x = datetime.now()
-        s = os.path.dirname(os.path.abspath(__file__)) + r"\params\\" + x.strftime(f'%d-%m-%Y-%H-%M-%S-params-{name}.json')
+        s = os.path.dirname(os.path.abspath(__file__)) + r"\params\\" + x.strftime(f'%d-%m-%Y-%H-%M-%S-params-{self.dataset.name}.json')
         f = open(s, 'w')
         json.dump(params, f, indent=4)
         f.close()
     
-    def store_results(self, name='test'):
+    def store_results(self):
         result = {}
         if len(self.acc) > 0:
             result['init'] = [self.acc[0], self.c[0]]
@@ -77,7 +77,7 @@ class VQCModel(object):
         if not os.path.exists('results'):
             os.mkdir('results')
         x = datetime.now()
-        s = os.path.dirname(os.path.abspath(__file__)) + r"\results\\" + x.strftime(f'%d-%m-%Y-%H-%M-%S-results-{name}.json')
+        s = os.path.dirname(os.path.abspath(__file__)) + r"\results\\" + x.strftime(f'%d-%m-%Y-%H-%M-%S-results-{self.dataset.name}.json')
         f = open(s, 'w')
         json.dump(result, f, indent=4)
         f.close()
@@ -123,10 +123,17 @@ class VQCModel(object):
         self.circular = params['circular']
         self.loss = params['loss']
         self.num_qubits = params['num_qubits']
+        self.dev = qml.device("lightning.qubit", wires = self.num_qubits, shots = 2 ** 10, batch_obs=True)
         self.loaded = True
 
 
     def train(self, epochs=100, f_iter=1):
+        if not os.path.exists('logs'):
+            os.mkdir('logs')
+        x = datetime.now()
+        s = os.path.dirname(os.path.abspath(__file__)) + r"\logs\\" + x.strftime(f'%d-%m-%Y-%H-%M-%S-log-{self.dataset.name}.txt')
+        f = open(s, 'w')
+
         train_data, train_labels = self.dataset.get_separated_data()
         test_data, test_labels = self.dataset.get_separated_test_data()
 
@@ -160,11 +167,11 @@ class VQCModel(object):
         self.c.append(self.loss(train_labels, pred))
 
         print("Initial values     - acc: {0} - c: {1}".format(self.acc[0], self.c[0]))
+        f.write(f'Initial values     - acc: {self.acc[0]} - c: {self.c[0]}\n')
         for i in range(epochs):
             results = opt.step(self.cost, weights, bias, self.circular, f_iter, self.loss, train_data, train_labels)
             weights = results[0]
             bias = results[1]
-
             self.weights = weights
             self.bias = bias
 
@@ -175,8 +182,11 @@ class VQCModel(object):
             self.acc.append(self.accuracy(train_labels, predictions))
             self.c.append(self.loss(train_labels, pred))
 
+            # if i % 20 == 0: self.store_params()
+
             print("Epoch: {0} - norm - acc: {1} - c: {2}".format(i+1, self.acc[-1], self.c[-1]))
-    
+            f.write(f"Epoch: {i+1} - norm - acc: {self.acc[-1]} - c: {self.c[-1]}\n")
+        f.close()
     def cost(self, weights, bias, circular, f_iter, loss, train_data, labels):
         predictions = [self.variational_classifier(weights = weights, bias = bias, x = x, feature_map=self.feature_map, ansatz=self.ansatz, circular=circular, f_iter=f_iter) for x in train_data]
         return loss(labels, predictions)
@@ -203,13 +213,11 @@ class VQCModel(object):
         return acc
     
     def circuit_wrapper(self, weights, x, circular, f_iter, feature_map, ansatz):
-        @qml.qnode(self.dev, interface="autograd")
+        @qml.qnode(self.dev, interface="autograd", diff_method='parameter-shift', max_diff=10)
         def circuit(weights, x, circular, f_iter, feature_map, ansatz):
             feature_map(x=x, f_iter=f_iter, num_qubits=self.num_qubits)
-            #angle_embedding(x)
 
             for w in weights:
-                #layer(W=w, circular=circular)
                 ansatz(W=w, circular=circular, num_qubits=self.num_qubits)
 
             return qml.expval(qml.PauliZ(0))
@@ -223,20 +231,28 @@ class VQCModel(object):
         return self.circuit_wrapper(weights = weights, x=x, circular=circular, f_iter=f_iter, feature_map=feature_map, ansatz=ansatz) + bias_val
 
 if __name__ == "__main__":
-    options = {'feature_map': z_featuremap,
-               'ansatz': rot_ansatz,
+    # datasets = [WineDataset(), BalancedILPDDataset(), ILPDDataset(), DiabetesDataset(), HeartFailureDataset()]
+    # datasets = [TeachingAssistantDataset(), HayesRothDataset()]
+    datasets = [BanknoteDataset(), AcuteInflammationsDataset(), ImmunotherapyDataset()]
+
+    multiprocessing.set_start_method('spawn')
+    manager = multiprocessing.Manager()
+    jobs = []
+    for d in datasets:
+        options = {'feature_map': z_featuremap,
+               'ansatz': layer,
                'learning_rate': 0.01,
-               'num_layers': 4,
+               'num_layers': 3,
                'perm_mode': 'min',
                'loss': cross_entropy_loss,
                'circular': True,
-               'num_qubits': 10
+               'num_qubits': d.num_qubits
                }
-    dataset = ILPDDataset()
-    vqc = VQCModel(dataset)
-    vqc.load(options)
-    vqc.train()
-    # vqc.store_params()
-    #weights_init = 2.0 * np.pi * np.random.randn(num_layers, num_qubits, 2)
+        vqc = VQCModel(d, options)
+        p = multiprocessing.Process(target=vqc.train)
+        jobs.append(p)
+        p.start()
+    for proc in jobs:
+        proc.join()
     
 
