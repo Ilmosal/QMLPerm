@@ -17,10 +17,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from IPython.display import clear_output
 
-from qiskit import BasicAer
-from qiskit.algorithms.optimizers import COBYLA, SPSA
-from qiskit.circuit.library import EfficientSU2, ZFeatureMap
-from qiskit_machine_learning.algorithms.classifiers import VQC
+#from qiskit import BasicAer
+#from qiskit.algorithms.optimizers import COBYLA, SPSA
+#from qiskit.circuit.library import EfficientSU2, ZFeatureMap
+#from qiskit_machine_learning.algorithms.classifiers import VQC
 
 import pennylane as qml
 

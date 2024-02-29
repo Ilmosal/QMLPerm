@@ -161,8 +161,6 @@ class VQCModel(object):
         self.weights = np.copy(self.weights_init)
         self.bias = self.bias_init if self.useBias else None
 
-
-
         pred = [self.variational_classifier(self.weights, self.bias, x, self.feature_map, self.ansatz, self.circular, f_iter) for x in perm_train_data]
         predictions = self.get_sign(pred)
 
@@ -175,7 +173,6 @@ class VQCModel(object):
             results = opt.step(self.cost, self.weights, self.bias, self.circular, f_iter, self.loss, train_data, train_labels)
             self.weights = results[0]
             self.bias = results[1] if self.useBias else None
-      
 
             pred = [self.variational_classifier(self.weights, self.bias, x, self.feature_map, self.ansatz, self.circular, f_iter) for x in perm_train_data]
             predictions = self.get_sign(pred)
@@ -184,7 +181,7 @@ class VQCModel(object):
             self.acc.append(self.accuracy(train_labels, predictions))
             self.c.append(self.loss(train_labels, pred))
 
-            if i % 50 == 0: 
+            if i % 50 == 0:
                 self.store_params()
                 self.store_results()
 
@@ -193,11 +190,11 @@ class VQCModel(object):
         self.store_params()
         self.store_results()
         f.close()
+
     def cost(self, weights, bias, circular, f_iter, loss, train_data, labels):
         predictions = [self.variational_classifier(weights = weights, bias = bias, x = x, feature_map=self.feature_map, ansatz=self.ansatz, circular=circular, f_iter=f_iter) for x in train_data]
         return loss(labels, predictions)
-    
-    
+
     def get_sign(self, v):
         n_vals = np.sign(v)
 
@@ -206,7 +203,7 @@ class VQCModel(object):
                 n_vals[i] = 1.0
 
         return n_vals
-    
+
     def accuracy(self, labels, predictions):
         acc = 0
 
@@ -217,13 +214,13 @@ class VQCModel(object):
         acc = acc / len(labels)
 
         return acc
-    
+
     def circuit_wrapper(self, weights, x, circular, f_iter, feature_map, ansatz):
         @qml.qnode(self.dev, interface="autograd", diff_method='parameter-shift')
         def circuit(weights, x, circular, f_iter, feature_map, ansatz):
-            feature_map(x=x, f_iter=f_iter, num_qubits=self.num_qubits)
 
             for w in weights:
+                feature_map(x=x, f_iter=f_iter, num_qubits=self.num_qubits)
                 ansatz(W=w, circular=circular, num_qubits=self.num_qubits)
 
             return qml.expval(qml.PauliZ(0))
@@ -247,13 +244,12 @@ if __name__ == "__main__":
     for d in datasets:
         options = {'feature_map': z_featuremap,
                'ansatz': layer,
-               'learning_rate': 0.01,
-               'num_layers': 4,
+               'learning_rate': 0.02,
+               'num_layers': 5,
                'perm_mode': 'random',
                'loss': cross_entropy_loss,
                'circular': True,
                'num_qubits': d.num_qubits,
-               'bias': True,
                'name': 'with_bias'
                }
         vqc = VQCModel(d, options)
@@ -262,5 +258,5 @@ if __name__ == "__main__":
         p.start()
     for proc in jobs:
         proc.join()
-    
+
 
