@@ -31,7 +31,7 @@ class Dataset(object):
     Dataset object to contain the dataset
     """
 
-    def __init__(self, dataset_path, test_size = 0.2, neg_labels = False):
+    def __init__(self, dataset_path, test_size = 0.2, neg_labels = True):
         # load data
         self.raw_data = np.loadtxt(dataset_path, delimiter=",", dtype=float)
 
@@ -94,7 +94,7 @@ class WineDataset(Dataset):
     """
     Container for the Wine Dataset
     """
-    def __init__(self, neg_labels = False, test_size = 0.0):
+    def __init__(self, neg_labels = True, test_size = 0.0):
         tmp_data = np.loadtxt("./datasets/wine.csv", delimiter=',')
         self.num_qubits = len(tmp_data[0]) - 1
         self.name = 'Wine'
@@ -126,7 +126,7 @@ class BanknoteDataset(Dataset):
     """
     Container for the Banknote authentication Dataset
     """
-    def __init__(self, neg_labels = False, test_size = 0.5):
+    def __init__(self, neg_labels = True, test_size = 0.5):
         tmp_data = np.loadtxt("./datasets/banknote_authentication.csv", delimiter=',')
         self.num_qubits = len(tmp_data[0]) - 1
         self.name = 'Banknote'
@@ -158,7 +158,7 @@ class ImmunotherapyDataset(Dataset):
     """
     Container for the Banknote authentication Dataset
     """
-    def __init__(self, neg_labels = False, test_size = 0.0):
+    def __init__(self, neg_labels = True, test_size = 0.0):
         tmp_data = np.loadtxt("./datasets/immunotherapy.csv", delimiter=',')
         self.num_qubits = len(tmp_data[0]) - 1
         self.name = 'Immunotherapy'
@@ -190,7 +190,7 @@ class AcuteInflammationsDataset(Dataset):
     """
     Container for the Acute inflammations Dataset
     """
-    def __init__(self, neg_labels = False, test_size = 0.0):
+    def __init__(self, neg_labels = True, test_size = 0.0):
         tmp_data = np.loadtxt("./datasets/acute_inflammations.csv", delimiter=',', dtype=str)
         self.num_qubits = len(tmp_data[0]) - 1
         self.name = 'Inflammations'
@@ -198,8 +198,7 @@ class AcuteInflammationsDataset(Dataset):
         for i in range(len(tmp_data)):
             tmp_data[i, 0] = float(tmp_data[i, 0])
             for j in range(1, 8):
-                tmp_data[i,j] = 1.0 if tmp_data[i,j] == 'no'  else 0.0
-
+                tmp_data[i,j] = 1.0 if tmp_data[i,j] == 'no' else 0.0
         tmp_data = [[eval(y) for y in x] for x in tmp_data]
         self.raw_data = tmp_data
 
@@ -227,7 +226,7 @@ class TransfusionDataset(Dataset):
     """
     Container for the Transfusion Dataset
     """
-    def __init__(self, neg_labels = False, test_size = 0.0):
+    def __init__(self, neg_labels = True, test_size = 0.0):
         tmp_data = np.loadtxt("./datasets/transfusion.csv", delimiter=',')
         self.num_qubits = len(tmp_data[0]) - 1
         self.name = 'Transfusion'
@@ -259,13 +258,13 @@ class HayesRothDataset(Dataset):
     """
     Container for the Hayes-Roth Dataset
     """
-    def __init__(self, neg_labels = False, test_size = 0.0):
+    def __init__(self, neg_labels = True, test_size = 0.0):
         tmp_data = np.loadtxt("./datasets/hayes-roth.csv", delimiter=',')
         self.num_qubits = len(tmp_data[0]) - 1
         self.name = 'Hayes-Roth'
 
         for i in range(len(tmp_data)):
-            tmp_data[i,-1] = 2.0 if tmp_data[i,-1] == 2.0 else 1.0
+            tmp_data[i,-1] = 1.0 if tmp_data[i,-1] == 2.0 else 0.0
 
         self.raw_data = tmp_data
 
@@ -291,7 +290,7 @@ class TeachingAssistantDataset(Dataset):
     """
     Container for the Hayes-Roth Dataset
     """
-    def __init__(self, neg_labels = False, test_size = 0.0):
+    def __init__(self, neg_labels = True, test_size = 0.0):
         tmp_data = np.loadtxt("./datasets/teaching_assistant.csv", delimiter=',')
         self.num_qubits = len(tmp_data[0]) - 1
         self.name = 'TeachingAssistant'
@@ -323,7 +322,7 @@ class DiabetesDataset(Dataset):
     """
     Container for the Wine Dataset
     """
-    def __init__(self, neg_labels = False, test_size = 0.0):
+    def __init__(self, neg_labels = True, test_size = 0.0):
         tmp_data = np.loadtxt("./datasets/diabetes_data_upload.csv", delimiter=',', dtype=str)
         self.num_qubits = len(tmp_data[0]) - 1
         self.name = 'Diabetes'
@@ -358,7 +357,7 @@ class HeartFailureDataset(Dataset):
     """
     Container for the heart failure
     """
-    def __init__(self, neg_labels = False, test_size = 0.0):
+    def __init__(self, neg_labels = True, test_size = 0.0):
         tmp_data = np.loadtxt("./datasets/heart_failure_clinical_records_dataset.csv", delimiter=',')
         self.num_qubits = len(tmp_data[0]) - 1
         self.name = 'HeartFailure'
@@ -390,7 +389,7 @@ class Fertility(Dataset):
     """
     Container for the heart failure
     """
-    def __init__(self, neg_labels = False, test_size = 0.0):
+    def __init__(self, neg_labels = True, test_size = 0.0):
         tmp_data = np.loadtxt("./datasets/fertility.csv", delimiter=',')
         self.num_qubits = len(tmp_data[0]) - 1
         self.name = 'Fertility'
@@ -418,7 +417,7 @@ class ILPDDataset(Dataset):
     Container for the ILDP dataset
     """
 
-    def __init__(self, neg_labels = False, test_size = 0.0):
+    def __init__(self, neg_labels = True, test_size = 0.0):
         tmp_data = arff.loadarff("./datasets/ilpd.arff")[0]
         tr_data = []
         self.num_qubits = 10
