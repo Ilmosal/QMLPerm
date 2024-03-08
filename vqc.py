@@ -41,13 +41,11 @@ class VQCModel(object):
         self.num_layers = params['num_layers'] if params and 'num_layers' in params else 4
         self.num_qubits = params['num_qubits'] if params and 'num_qubits' in params else 10
         self.name = params['name'] if params and 'name' in params else 'default'
-        self.useBias = params['useBias'] if params and 'useBias' in params else True
         self.acc = []
         self.c = []
         self.weights = []
         self.dev = qml.device("lightning.qubit", wires = self.num_qubits, shots = 2 ** 10, batch_obs=True)
         self.weights_init = 2.0 * np.pi * np.random.randn(self.num_layers, self.num_qubits*2, 3) if not 'weights_init' in params else params['weights_init']
-        self.bias_init = 0.0 if not 'bias_init' in params else params['bias_init']
         self.loaded = False
 
     def store_params(self):
@@ -56,7 +54,6 @@ class VQCModel(object):
         params['feature_map'] = params['feature_map'].__name__
         params['ansatz'] = params['ansatz'].__name__
         params['loss'] = params['loss'].__name__
-        params['bias'] = self.bias
         params['loaded'] = self.loaded
         params['weights'] = self.weights.tolist()
 
@@ -91,9 +88,6 @@ class VQCModel(object):
         if 'weights' in params:
             params['weights_init'] = params['weights']
             self.weights_init = params['weights']
-        if 'bias' in params:
-            params['bias_init'] = params['bias']
-            self.bias_init = params['bias']
 
         match params['feature_map']:
             case 'z_featuremap':
@@ -125,7 +119,6 @@ class VQCModel(object):
         self.loss = params['loss']
         self.num_qubits = params['num_qubits']
         self.name = params['name']
-        self.useBias = params['useBias']
         self.dev = qml.device("lightning.qubit", wires = self.num_qubits, shots = 2 ** 10, batch_obs=True)
         self.loaded = True
 
@@ -159,9 +152,9 @@ class VQCModel(object):
 
         opt = AdamOptimizer(self.learning_rate)
         self.weights = np.copy(self.weights_init)
-        self.bias = self.bias_init if self.useBias else None
 
-        pred = [self.variational_classifier(self.weights, self.bias, x, self.feature_map, self.ansatz, self.circular, f_iter) for x in perm_train_data]
+
+        pred = [self.variational_classifier(self.weights, x, self.feature_map, self.ansatz, self.circular, f_iter) for x in perm_train_data]
         predictions = self.get_sign(pred)
 
         self.acc.append(self.accuracy(train_labels, predictions))
@@ -170,11 +163,11 @@ class VQCModel(object):
         print("Initial values     - acc: {0} - c: {1}, {2}, {3}".format(self.acc[0], self.c[0], self.dataset.name, self.name))
         f.write(f'Initial values     - acc: {self.acc[0]} - c: {self.c[0]}, {self.name}\n')
         for i in range(epochs):
-            results = opt.step(self.cost, self.weights, self.bias, self.circular, f_iter, self.loss, train_data, train_labels)
+            results = opt.step(self.cost, self.weights, self.circular, f_iter, self.loss, train_data, train_labels)
             self.weights = results[0]
-            self.bias = results[1] if self.useBias else None
 
-            pred = [self.variational_classifier(self.weights, self.bias, x, self.feature_map, self.ansatz, self.circular, f_iter) for x in perm_train_data]
+
+            pred = [self.variational_classifier(self.weights, x, self.feature_map, self.ansatz, self.circular, f_iter) for x in perm_train_data]
             predictions = self.get_sign(pred)
             print(np.unique(predictions, return_counts=True))
 
@@ -191,8 +184,8 @@ class VQCModel(object):
         self.store_results()
         f.close()
 
-    def cost(self, weights, bias, circular, f_iter, loss, train_data, labels):
-        predictions = [self.variational_classifier(weights = weights, bias = bias, x = x, feature_map=self.feature_map, ansatz=self.ansatz, circular=circular, f_iter=f_iter) for x in train_data]
+    def cost(self, weights, circular, f_iter, loss, train_data, labels):
+        predictions = [self.variational_classifier(weights = weights, x = x, feature_map=self.feature_map, ansatz=self.ansatz, circular=circular, f_iter=f_iter) for x in train_data]
         return loss(labels, predictions)
 
     def get_sign(self, v):
@@ -219,23 +212,20 @@ class VQCModel(object):
         @qml.qnode(self.dev, interface="autograd", diff_method='parameter-shift')
         def circuit(weights, x, circular, f_iter, feature_map, ansatz):
 
+            feature_map(x=x, f_iter=f_iter, num_qubits=self.num_qubits)
             for w in weights:
-                feature_map(x=x, f_iter=f_iter, num_qubits=self.num_qubits)
                 ansatz(W=w, circular=circular, num_qubits=self.num_qubits)
 
             return qml.expval(qml.PauliZ(0))
         return circuit(weights, x, circular, f_iter, feature_map, ansatz)
 
-    def variational_classifier(self, weights, bias, x, feature_map, ansatz, circular = True, f_iter = 1):
-        bias_val = 0.0
-        if bias is not None:
-            bias_val = bias
+    def variational_classifier(self, weights, x, feature_map, ansatz, circular = True, f_iter = 1):
 
-        return self.circuit_wrapper(weights = weights, x=x, circular=circular, f_iter=f_iter, feature_map=feature_map, ansatz=ansatz) + bias_val
+        return self.circuit_wrapper(weights = weights, x=x, circular=circular, f_iter=f_iter, feature_map=feature_map, ansatz=ansatz)
 
 if __name__ == "__main__":
     # datasets = [WineDataset(), BalancedILPDDataset(), ILPDDataset(), DiabetesDataset(), HeartFailureDataset(), Fertility(), TransfusionDataset(), TeachingAssistantDataset(), HayesRothDataset(), BanknoteDataset(), AcuteInflammationsDataset(), ImmunotherapyDataset()]
-    datasets = [HayesRothDataset()]
+    datasets = [TransfusionDataset()]
 
 
     multiprocessing.set_start_method('spawn')
@@ -245,12 +235,12 @@ if __name__ == "__main__":
         options = {'feature_map': z_featuremap,
                'ansatz': layer,
                'learning_rate': 0.02,
-               'num_layers': 5,
+               'num_layers': 3,
                'perm_mode': 'random',
                'loss': cross_entropy_loss,
                'circular': True,
                'num_qubits': d.num_qubits,
-               'name': 'with_bias'
+               'name': 'layers=5,lr=0.02,no_datareup'
                }
         vqc = VQCModel(d, options)
         p = multiprocessing.Process(target=vqc.train)

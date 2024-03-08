@@ -226,7 +226,7 @@ class TransfusionDataset(Dataset):
     """
     Container for the Transfusion Dataset
     """
-    def __init__(self, neg_labels = True, test_size = 0.0):
+    def __init__(self, neg_labels = True, test_size = 0.5):
         tmp_data = np.loadtxt("./datasets/transfusion.csv", delimiter=',')
         self.num_qubits = len(tmp_data[0]) - 1
         self.name = 'Transfusion'
