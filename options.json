@@ -1,0 +1,13 @@
+[
+    {"feature_map": "zz_featuremap",
+    "ansatz": "layer",
+    "learning_rate": 0.01,
+    "num_layers": 5,
+    "perm_mode": "random",
+    "loss": "cross_entropy_loss",
+    "circular": true,
+    "num_qubits": "10",
+    "name": "zz_featuremap",
+    "useDataReuploading": true
+    }
+]

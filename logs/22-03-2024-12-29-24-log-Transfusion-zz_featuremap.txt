@@ -1,0 +1,1 @@
+Initial values     - acc: 0.4946524064171123 - c: 1.0012804629578806, zz_featuremap

@@ -12,12 +12,13 @@ def zz_featuremap(x, f_iter, num_qubits):
     """
     ZZFeatureMap
     """
+
     for j in range(f_iter):
         for i in range(num_qubits):
             qml.Hadamard(wires=i)
             qml.U1(2.0*x[i], wires=i)
 
-        for x in range(num_qubits-1):
+        for i in range(num_qubits-1):
             qml.CNOT(wires=[i, i+1])
             qml.U1(2.0*phi(x[i], x[i+1]), wires=i+1)
             qml.CNOT(wires=[i, i+1])

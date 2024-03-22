@@ -1,1 +1,0 @@
-Initial values     - acc: 0.38636363636363635 - c: 1.1869473145117644, layers=5,lr=0.02,no_datareup

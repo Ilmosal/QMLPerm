@@ -9,9 +9,6 @@ TODO:
 import os
 import multiprocessing
 import pennylane as qml
-import time
-import jax
-import jax.numpy as jnp
 import json
 from datetime import datetime
 from pennylane import numpy as np
@@ -20,8 +17,6 @@ from pennylane.templates import AngleEmbedding
 
 from tsp import solve
 from data_perm import WineDataset, Dataset, BalancedILPDDataset, ILPDDataset, DiabetesDataset, HeartFailureDataset, Fertility, TransfusionDataset, TeachingAssistantDataset, HayesRothDataset, BanknoteDataset, AcuteInflammationsDataset, ImmunotherapyDataset
-
-import sys
 
 from ansatze import layer, rot_ansatz
 from feature_maps import zz_featuremap, z_featuremap, angle_embedding
@@ -41,11 +36,13 @@ class VQCModel(object):
         self.num_layers = params['num_layers'] if params and 'num_layers' in params else 4
         self.num_qubits = params['num_qubits'] if params and 'num_qubits' in params else 10
         self.name = params['name'] if params and 'name' in params else 'default'
+        self.useDataReuploading = params['useDataReuploading'] if params and 'useDataReuploading' in params else False
         self.acc = []
         self.c = []
         self.weights = []
         self.dev = qml.device("lightning.qubit", wires = self.num_qubits, shots = 2 ** 10, batch_obs=True)
-        self.weights_init = 2.0 * np.pi * np.random.randn(self.num_layers, self.num_qubits*2, 3) if not 'weights_init' in params else params['weights_init']
+        # self.weights_init = 2.0 * np.pi * np.random.randn(self.num_layers, self.num_qubits*2, 3) if not 'weights_init' in params else params['weights_init']
+        self.weights_init = 2.0 * np.pi * np.ones((self.num_layers, self.num_qubits*2, 3)) if not 'weights_init' in params else params['weights_init']
         self.loaded = False
 
     def store_params(self):
@@ -123,7 +120,7 @@ class VQCModel(object):
         self.loaded = True
 
 
-    def train(self, epochs=251, f_iter=1):
+    def train(self, epochs=301, f_iter=1):
         if not os.path.exists('logs'):
             os.mkdir('logs')
         x = datetime.now()
@@ -159,7 +156,7 @@ class VQCModel(object):
 
         self.acc.append(self.accuracy(train_labels, predictions))
         self.c.append(self.loss(train_labels, pred))
-
+        self.store_params()
         print("Initial values     - acc: {0} - c: {1}, {2}, {3}".format(self.acc[0], self.c[0], self.dataset.name, self.name))
         f.write(f'Initial values     - acc: {self.acc[0]} - c: {self.c[0]}, {self.name}\n')
         for i in range(epochs):
@@ -175,12 +172,10 @@ class VQCModel(object):
             self.c.append(self.loss(train_labels, pred))
 
             if i % 50 == 0:
-                self.store_params()
                 self.store_results()
 
             print("Epoch: {0} - norm - acc: {1} - c: {2}, {3}".format(i+1, self.acc[-1], self.c[-1], self.dataset.name))
             f.write(f"Epoch: {i+1} - norm - acc: {self.acc[-1]} - c: {self.c[-1]}\n")
-        self.store_params()
         self.store_results()
         f.close()
 
@@ -212,8 +207,11 @@ class VQCModel(object):
         @qml.qnode(self.dev, interface="autograd", diff_method='parameter-shift')
         def circuit(weights, x, circular, f_iter, feature_map, ansatz):
 
-            feature_map(x=x, f_iter=f_iter, num_qubits=self.num_qubits)
+            if not self.useDataReuploading: 
+                feature_map(x=x, f_iter=f_iter, num_qubits=self.num_qubits)
             for w in weights:
+                if self.useDataReuploading:
+                    feature_map(x=x, f_iter=f_iter, num_qubits=self.num_qubits)
                 ansatz(W=w, circular=circular, num_qubits=self.num_qubits)
 
             return qml.expval(qml.PauliZ(0))
@@ -227,26 +225,29 @@ if __name__ == "__main__":
     # datasets = [WineDataset(), BalancedILPDDataset(), ILPDDataset(), DiabetesDataset(), HeartFailureDataset(), Fertility(), TransfusionDataset(), TeachingAssistantDataset(), HayesRothDataset(), BanknoteDataset(), AcuteInflammationsDataset(), ImmunotherapyDataset()]
     datasets = [TransfusionDataset()]
 
-
+    with open('./options.json') as json_file:
+            options = json.load(json_file)
+    
+    print(options)
     multiprocessing.set_start_method('spawn')
     manager = multiprocessing.Manager()
     jobs = []
     for d in datasets:
-        options = {'feature_map': z_featuremap,
-               'ansatz': layer,
-               'learning_rate': 0.02,
-               'num_layers': 3,
-               'perm_mode': 'random',
-               'loss': cross_entropy_loss,
-               'circular': True,
-               'num_qubits': d.num_qubits,
-               'name': 'layers=5,lr=0.02,no_datareup'
-               }
-        vqc = VQCModel(d, options)
-        p = multiprocessing.Process(target=vqc.train)
-        jobs.append(p)
-        p.start()
-    for proc in jobs:
-        proc.join()
+        for op in options:
+            op['feature_map'] = z_featuremap if op['feature_map'] == "z_featuremap" else zz_featuremap
+            op['ansatz'] = layer if op['ansatz'] == 'layer' else rot_ansatz
+            op['loss'] = cross_entropy_loss if op['loss'] == 'cross_entropy_loss' else square_loss
+            op['num_qubits'] = d.num_qubits
+
+            vqc = VQCModel(d, op)
+            p = multiprocessing.Process(target=vqc.train)
+            jobs.append(p)
+            p.start()
+            for proc in jobs:
+                proc.join()
+        
+
+
+
 
 
