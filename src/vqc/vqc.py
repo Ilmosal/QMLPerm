@@ -11,16 +11,22 @@ import multiprocessing
 import pennylane as qml
 import json
 from datetime import datetime
+import pandas as pd
+from sklearn.model_selection import train_test_split
 from pennylane import numpy as np
 from pennylane.optimize import NesterovMomentumOptimizer, AdamOptimizer, SPSAOptimizer
 from pennylane.templates import AngleEmbedding
 
-from tsp import solve
+from vqc.tsp import solve
 from data_perm import WineDataset, Dataset, BalancedILPDDataset, ILPDDataset, DiabetesDataset, HeartFailureDataset, Fertility, TransfusionDataset, TeachingAssistantDataset, HayesRothDataset, BanknoteDataset, AcuteInflammationsDataset, ImmunotherapyDataset
+
 
 from ansatze import layer, rot_ansatz
 from feature_maps import zz_featuremap, z_featuremap, angle_embedding
 from loss_functions import cross_entropy_loss, square_loss
+import sys
+
+np.set_printoptions(threshold=sys.maxsize)
 
 class VQCModel(object):
     def __init__(self, dataset, params={}):
@@ -147,6 +153,8 @@ class VQCModel(object):
             case _:
                 perm_train_data = train_data[:, min_perm]
 
+
+   
         opt = AdamOptimizer(self.learning_rate)
         self.weights = np.copy(self.weights_init)
 
@@ -223,12 +231,12 @@ class VQCModel(object):
 
 if __name__ == "__main__":
     # datasets = [WineDataset(), BalancedILPDDataset(), ILPDDataset(), DiabetesDataset(), HeartFailureDataset(), Fertility(), TransfusionDataset(), TeachingAssistantDataset(), HayesRothDataset(), BanknoteDataset(), AcuteInflammationsDataset(), ImmunotherapyDataset()]
-    datasets = [TransfusionDataset()]
+    datasets = [TransfusionDataset(neg_labels=True, test_size=0.2)]
 
     with open('./options.json') as json_file:
             options = json.load(json_file)
     
-    print(options)
+    # print(options)
     multiprocessing.set_start_method('spawn')
     manager = multiprocessing.Manager()
     jobs = []

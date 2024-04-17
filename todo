@@ -1,8 +1,0 @@
-File for things todo:
-
-1. Modularize the code so that, the experimental setup is easier to create
-2. Increase the amount of dataset used by the learning algorithm
-    - Make sure that the algorithm is actually learning something and that the tasks are not too easy either
-3. Fix the optimizing method to be the same everytime
-4. Create the experimental setup interator so that the program is easily parallelizable for a super computer
-5. Run the experiments

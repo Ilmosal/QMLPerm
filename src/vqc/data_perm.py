@@ -21,7 +21,7 @@ import numpy as np
 
 import pennylane as qml
 
-from tsp import solve, total_dist
+from vqc.tsp import solve, total_dist
 
 class Dataset(object):
     """
@@ -170,7 +170,7 @@ class ImmunotherapyDataset(Dataset):
         self.data -= np.min(self.data, axis=0)
         self.data /= np.ptp(self.data, axis=0)
 
-        np.random.shuffle(self.data)
+        # np.random.shuffle(self.data)
 
         if neg_labels:
             for i in range(len(self.data)):
@@ -181,7 +181,7 @@ class ImmunotherapyDataset(Dataset):
             self.train = self.data
             self.test = np.array([])
         else:
-            self.train, self.test = train_test_split(self.data, test_size=test_size)
+            self.train, self.test = train_test_split(self.data, test_size=test_size, shuffle=False)
 
 class AcuteInflammationsDataset(Dataset):
     """
@@ -223,7 +223,7 @@ class TransfusionDataset(Dataset):
     """
     Container for the Transfusion Dataset
     """
-    def __init__(self, neg_labels = True, test_size = 0.5):
+    def __init__(self, neg_labels = True, test_size = 0.2):
         tmp_data = np.loadtxt("./datasets/transfusion.csv", delimiter=',')
         self.num_qubits = len(tmp_data[0]) - 1
         self.name = 'Transfusion'
@@ -243,13 +243,12 @@ class TransfusionDataset(Dataset):
         if neg_labels:
             for i in range(len(self.data)):
                 self.data[i, -1] = self.data[i, -1] * 2 - 1
-
         # Split to training and validation set
         if test_size == 0.0:
             self.train = self.data
             self.test = np.array([])
         else:
-            self.train, self.test = train_test_split(self.data, test_size=test_size)
+            self.train, self.test, self.train_labels, self.test_labels = train_test_split(self.data[:,:-1], self.data[:, -1], test_size=test_size)
 
 class HayesRothDataset(Dataset):
     """

@@ -3,7 +3,7 @@
     "ansatz": "layer",
     "learning_rate": 0.01,
     "num_layers": 5,
-    "perm_mode": "random",
+    "perm_mode": "min",
     "loss": "cross_entropy_loss",
     "circular": true,
     "num_qubits": "10",
