@@ -18,12 +18,12 @@ from pennylane.optimize import NesterovMomentumOptimizer, AdamOptimizer, SPSAOpt
 from pennylane.templates import AngleEmbedding
 
 from vqc.tsp import solve
-from data_perm import WineDataset, Dataset, BalancedILPDDataset, ILPDDataset, DiabetesDataset, HeartFailureDataset, Fertility, TransfusionDataset, TeachingAssistantDataset, HayesRothDataset, BanknoteDataset, AcuteInflammationsDataset, ImmunotherapyDataset
+from vqc.data_perm import WineDataset, Dataset, BalancedILPDDataset, ILPDDataset, DiabetesDataset, HeartFailureDataset, Fertility, TransfusionDataset, TeachingAssistantDataset, HayesRothDataset, BanknoteDataset, AcuteInflammationsDataset, ImmunotherapyDataset
 
 
-from ansatze import layer, rot_ansatz
-from feature_maps import zz_featuremap, z_featuremap, angle_embedding
-from loss_functions import cross_entropy_loss, square_loss
+from vqc.ansatze import layer, rot_ansatz
+from vqc.feature_maps import zz_featuremap, z_featuremap, angle_embedding
+from vqc.loss_functions import cross_entropy_loss, square_loss
 import sys
 
 np.set_printoptions(threshold=sys.maxsize)

@@ -1,0 +1,6 @@
+from data.bars_and_stripes import generate_bars_and_stripes
+from data.hidden_manifold import generate_hidden_manifold_model
+from data.hyperplanes import generate_hyperplanes_parity
+from data.linearly_separable import generate_linearly_separable
+from data.mnist import generate_mnist
+from data.two_curves import generate_two_curves

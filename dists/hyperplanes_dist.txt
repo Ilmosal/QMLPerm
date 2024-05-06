@@ -1,0 +1,19 @@
+Dimension: 8, min_dist: 5.48394676140716, max_dist: 7.136423403297675
+Dimension: 9, min_dist: 5.830835621160132, max_dist: 8.086240884565697
+Dimension: 10, min_dist: 5.488821403891034, max_dist: 8.913344493250849
+Dimension: 11, min_dist: 4.695902244411739, max_dist: 9.889511875048614
+Dimension: 12, min_dist: 8.252446746743459, max_dist: 11.2809387940356
+
+Iteration 2 
+Dimension: 8, min_dist: 5.351273593749782, max_dist: 7.269585412880771
+Dimension: 9, min_dist: 6.207040429492812, max_dist: 7.97240098862992
+Dimension: 10, min_dist: 5.757080162686631, max_dist: 9.220831228933857
+Dimension: 11, min_dist: 8.67381821262849, max_dist: 10.41664610122138
+Dimension: 12, min_dist: 8.309684912643672, max_dist: 11.386743406111888
+
+Iteration 3
+Dimension: 8, min_dist: 6.830588407713542, max_dist: 7.632829332101344
+Dimension: 9, min_dist: 5.879702521694023, max_dist: 7.943259482648841
+Dimension: 10, min_dist: 7.429547705503116, max_dist: 9.224671076748297
+Dimension: 11, min_dist: 7.3757878461651485, max_dist: 10.25983911918013
+Dimension: 12, min_dist: 8.512520701847157, max_dist: 11.39524165043391
