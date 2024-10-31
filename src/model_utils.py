@@ -25,9 +25,15 @@ import jax.numpy as jnp
 from sklearn.exceptions import ConvergenceWarning
 from sklearn.utils import gen_batches
 
+def accuracy(preds, labels):
+    acc = 0
+    for l, p in zip(labels, preds):
+        if abs(l-p) < 1e-5:
+            acc += 1
+    return acc / len(labels)
 
 def train(
-    model, loss_fn, optimizer, X, y, random_key_generator, convergence_interval=200
+    model, loss_fn, optimizer, X, y, random_key_generator, convergence_interval=200, X_test = None, y_test = None
 ):
     """
     Trains a model using an optimizer and a loss function via gradient descent. We assume that the loss function
@@ -58,6 +64,10 @@ def train(
     if not model.batch_size / model.max_vmap % 1 == 0:
         raise Exception("Batch size must be multiple of max_vmap.")
 
+    test_set = False
+    if X_test is not None:
+        test_set = True
+
     params = model.params_
     opt = optimizer(learning_rate=model.learning_rate)
     opt_state = opt.init(params)
@@ -81,6 +91,9 @@ def train(
         return params, opt_state, loss_val
 
     loss_history = []
+    test_acc_history = []
+    train_acc_history = []
+
     converged = False
     start = time.time()
     for step in range(model.max_steps):
@@ -93,6 +106,12 @@ def train(
         if np.isnan(loss_val):
             logging.info(f"nan encountered. Training aborted.")
             break
+
+        model.params_ = params
+
+        if step % int(model.max_steps / 100) == 0 and test_set:
+            train_acc_history.append(model.score(X[:,:X_test.shape[1]], y))
+            test_acc_history.append(model.score(X_test, y_test))
 
         # decide convergence
         if step > 2 * convergence_interval:
@@ -113,10 +132,12 @@ def train(
     end = time.time()
     loss_history = np.array(loss_history)
     model.loss_history_ = loss_history / np.max(np.abs(loss_history))
+    model.test_acc_history = np.array(test_acc_history)
+    model.train_acc_history = np.array(train_acc_history)
     model.training_time_ = end - start
 
     if not converged:
-        print("Loss did not converge:", loss_history)
+        #print("Loss did not converge:", loss_history)
         raise ConvergenceWarning(
             f"Model {model.__class__.__name__} has not converged after the maximum number of {model.max_steps} steps."
         )

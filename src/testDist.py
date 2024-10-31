@@ -36,7 +36,8 @@ for i in range(6):
                 X, y = generate_two_curves(400, j, 3, 0.5, 0.5)
                 filename= 'two_curves_dist'
         f = open(f'{filename}.txt', 'a')
-        if j == 8: 
+
+        if j == 8:
             f.write('\n')
             f.write('Iteration 3\n')
         var_mat = np.abs(np.corrcoef(X[:,:], rowvar=False))
@@ -44,5 +45,5 @@ for i in range(6):
         max_perm, max_dist = solve(var_mat, maximize = True, linear = False)
         f.write(f"Dimension: {j}, min_dist: {min_dist}, max_dist: {max_dist}\n")
         f.close()
-    
+
 

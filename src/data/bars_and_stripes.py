@@ -14,7 +14,6 @@
 
 import numpy as np
 
-
 def generate_bars_and_stripes(n_samples, height, width, noise_std):
     """Data generation procedure for 'bars and stripes'.
 
@@ -24,7 +23,7 @@ def generate_bars_and_stripes(n_samples, height, width, noise_std):
         width (int): number of pixels for image width
         noise_std (float): standard deviation of Gaussian noise added to the pixels
     """
-    X = np.ones([n_samples, 1, height, width]) * -1
+    X = np.ones([n_samples, 1, width, height]) * -1
     y = np.zeros([n_samples])
 
     for i in range(len(X)):
@@ -37,5 +36,7 @@ def generate_bars_and_stripes(n_samples, height, width, noise_std):
             X[i, 0, :, columns] = 1.0
             y[i] = +1
         X[i, 0] = X[i, 0] + np.random.normal(0, noise_std, size=X[i, 0].shape)
+
+    X = np.reshape(X, (n_samples, height*width))
 
     return X, y
