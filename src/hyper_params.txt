@@ -1,0 +1,18 @@
+linearly separale
+drc - obs_type = full, n_layers = 10, learning_rate 0.01
+    - obs_type = single, n_layers = 10, learning_rate 0.01
+iqvc - 
+
+hyperplanes
+
+hidden manifold
+
+bars and stripes
+
+fin-bench-cd2
+
+find-bench-ld1
+
+fin-bench-cf1
+
+fin-bench-cc3

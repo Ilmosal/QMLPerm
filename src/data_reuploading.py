@@ -1,4 +1,3 @@
-
 # Copyright 2024 Xanadu Quantum Technologies Inc.
 
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,8 +21,7 @@ import optax
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.utils.validation import check_is_fitted
 from sklearn.preprocessing import MinMaxScaler
-from model_utils import train
-from model_utils import chunk_vmapped_fn
+from model_utils import train, chunk_vmapped_fn
 
 jax.config.update("jax_enable_x64", True)
 
@@ -32,17 +30,17 @@ class DataReuploadingClassifier(BaseEstimator, ClassifierMixin):
         self,
         n_layers=4,
         observable_type="single",
-        entangling_layer="block",
         convergence_interval=200,
         max_steps=10000,
         learning_rate=0.05,
         batch_size=32,
+        entangling_layer="block",
         max_vmap=None,
         jit=True,
         scaling=1.0,
-        dev_type="default.qubit.jax",
+        dev_type="default.qubit",
         qnode_kwargs={"interface": "jax-jit"},
-        random_state=None,
+        random_state=42,
     ):
         r"""
         Data reuploading classifier from https://arxiv.org/abs/1907.02085. Here we code the 'multi-qubit classifier'.
@@ -93,7 +91,6 @@ class DataReuploadingClassifier(BaseEstimator, ClassifierMixin):
         # attributes that do not depend on data
         self.n_layers = n_layers
         self.observable_type = observable_type
-        self.entangling_layer = entangling_layer
         self.convergence_interval = convergence_interval
         self.max_steps = max_steps
         self.learning_rate = learning_rate
@@ -102,12 +99,9 @@ class DataReuploadingClassifier(BaseEstimator, ClassifierMixin):
         self.qnode_kwargs = qnode_kwargs
         self.jit = jit
         self.scaling = scaling
-        if random_state is not None:
-            self.random_state = random_state
-        else:
-            self.random_state = np.random.randint(0, 9999999)
-
-        #self.rng = np.random.default_rng(random_state)
+        self.random_state = random_state
+        self.rng = np.random.default_rng(random_state)
+        self.entangling_layer = entangling_layer
 
         if max_vmap is None:
             self.max_vmap = self.batch_size
@@ -122,7 +116,7 @@ class DataReuploadingClassifier(BaseEstimator, ClassifierMixin):
         self.circuit = None
 
     def generate_key(self):
-        return jax.random.PRNGKey(self.random_state)
+        return jax.random.PRNGKey(self.rng.integers(100000))
 
     def construct_model(self):
         """Construct the quantum circuit used in the model."""
@@ -155,14 +149,15 @@ class DataReuploadingClassifier(BaseEstimator, ClassifierMixin):
                     qml.Rot(*angles, wires=i)
 
                     x_idx += 3
-
-                if self.entangling_layer == "ring":
-                    qml.broadcast(qml.CZ, range(self.n_qubits_), pattern="ring")
-                elif self.entangling_layer == "block":
+                if self.entangling_layer == "block":
                     if layer % 2 == 0:
                         qml.broadcast(qml.CZ, range(self.n_qubits_), pattern="double")
                     else:
                         qml.broadcast(qml.CZ, range(self.n_qubits_), pattern="double_odd")
+                elif self.entangling_layer == "ring":
+                    qml.broadcast(qml.CZ, range(self.n_qubits_), pattern="ring")
+                else:
+                    raise Exception("Entangling layer defined wrong: {0}".format(self.entangling_layer))
 
             # final reupload without CZs
             x_idx = 0
@@ -232,7 +227,7 @@ class DataReuploadingClassifier(BaseEstimator, ClassifierMixin):
         alphas = jnp.ones(shape=(2, self.observable_weight))
         self.params_ = {"thetas": thetas, "omegas": omegas, "alphas": alphas}
 
-    def fit(self, X, y, X_test, y_test):
+    def fit(self, X, y):
         """Fit the model to data X and labels y.
 
         Args:
@@ -273,7 +268,6 @@ class DataReuploadingClassifier(BaseEstimator, ClassifierMixin):
 
         if self.jit:
             loss_fn = jax.jit(loss_fn)
-
         self.construct_model()
         self.initialize_params()
         optimizer = optax.adam
@@ -286,8 +280,6 @@ class DataReuploadingClassifier(BaseEstimator, ClassifierMixin):
             y,
             self.generate_key,
             convergence_interval=self.convergence_interval,
-            X_test = X_test,
-            y_test = y_test
         )
 
         return self
@@ -399,7 +391,6 @@ class DataReuploadingClassifierNoScaling(DataReuploadingClassifier):
 
         alphas = jnp.ones(shape=(2, self.observable_weight))
         self.params_ = {"thetas": thetas, "alphas": alphas}
-
 
 class DataReuploadingClassifierNoTrainableEmbedding(DataReuploadingClassifier):
 
@@ -513,6 +504,7 @@ class DataReuploadingClassifierNoCost(DataReuploadingClassifier):
 
 
 class DataReuploadingClassifierSeparable(DataReuploadingClassifier):
+
     def construct_model(self):
         """Construct the quantum circuit used in the model."""
 
@@ -565,101 +557,3 @@ class DataReuploadingClassifierSeparable(DataReuploadingClassifier):
         self.chunked_forward = chunk_vmapped_fn(self.forward, 1, self.max_vmap)
 
         return self.forward
-
-class IQPDataReuploading(DataReuploadingClassifier):
-    """
-    Datareuploading classifier using the IQP embedding structure
-    """
-
-    def initialize_params(self):
-        # initialise the trainable parameters
-        weights = (
-            2
-            * jnp.pi
-            * jax.random.uniform(
-                shape=(self.n_layers, self.n_qubits_, 3), key=self.generate_key()
-            )
-        )
-        alphas = jnp.ones(shape=(2, self.observable_weight))
-
-        self.params_ = {"weights": weights, "alphas": alphas}
-
-    def construct_model(self):
-        """Construct the quantum circuit used in the model."""
-        dev = qml.device(self.dev_type, wires=self.n_qubits_)
-
-        @qml.qnode(dev, **self.qnode_kwargs)
-        def circuit(params, x):
-            """
-            The datareloading circuit that uses an IQP data embedding.
-            """
-            qml.IQPEmbedding(x, wires=range(self.n_qubits_), n_repeats=1)
-            weights = params["weights"][0]
-
-            for i in range(self.n_qubits_):
-                qml.Rot(weights[i][0], weights[i][1], weights[i][2], wires=[i])
-
-            qml.broadcast(qml.CZ, wires=range(self.n_qubits_), pattern="all_to_all")
-
-            return [qml.expval(qml.PauliZ(wires=[i])) for i in range(self.n_qubits_)]
-
-        self.circuit = circuit
-
-        def circuit_as_array(params, x):
-            # pennylane returns a list in the circuit above, so we need this
-            return jnp.array(circuit(params, x))
-
-        if self.jit:
-            circuit_as_array = jax.jit(circuit_as_array)
-        self.forward = jax.vmap(circuit_as_array, in_axes=(None, 0))
-        self.chunked_forward = chunk_vmapped_fn(self.forward, 1, self.max_vmap)
-
-        return self.forward
-
-    def initialize(self, n_features, classes=None):
-        """Initialize attributes that depend on the number of features and the class labels.
-        Args:
-            n_features (int): Number of features that the classifier expects
-            classes (array-like): class labels that the classifier expects
-        """
-        if classes is None:
-            classes = [-1, 1]
-
-        self.classes_ = classes
-        self.n_classes_ = len(self.classes_)
-        assert self.n_classes_ == 2
-        assert 1 in self.classes_ and -1 in self.classes_
-
-        self.n_features = n_features
-        self.n_qubits_ = self.n_features
-
-        if self.observable_type == "single":
-            self.observable_weight = 1
-        elif self.observable_type == "half":
-            if self.n_qubits_ == 1:
-                self.observable_weight = 1
-            else:
-                self.observable_weight = self.n_qubits_ // 2
-        elif self.observable_type == "full":
-            self.observable_weight = self.n_qubits_
-
-        self.initialize_params()
-        self.construct_model()
-
-    def transform(self, X, preprocess=True):
-        """
-        Args:
-            X (np.ndarray): Data of shape (n_samples, n_features)
-        """
-        if preprocess:
-            if self.scaler is None:
-                # if the model is unfitted, initialise the scaler here
-                self.scaler = MinMaxScaler(feature_range=(-np.pi / 2, np.pi / 2))
-                self.scaler.fit(X)
-
-            X = self.scaler.transform(X)
-
-        X = X * self.scaling
-        return X
-
-

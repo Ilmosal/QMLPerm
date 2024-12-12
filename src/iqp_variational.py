@@ -16,7 +16,7 @@ import pennylane as qml
 import numpy as np
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.preprocessing import MinMaxScaler
-from qml_benchmarks.model_utils import *
+from model_utils import *
 
 class IQPVariationalClassifier(BaseEstimator, ClassifierMixin):
     def __init__(

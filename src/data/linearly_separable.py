@@ -22,8 +22,6 @@ def generate_linearly_separable(n_samples, n_features, margin):
         n_features (int): dimension of the data samples
         margin (float): width between hyperplane and closest samples
     """
-    np.random.seed(42)
-
     w_true = np.ones(n_features)
 
     # hack: sample more data than we need randomly from a hypercube

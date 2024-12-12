@@ -5,6 +5,7 @@ import itertools
 import json
 import numpy as np
 from sklearn.utils import shuffle
+from sklearn.model_selection import train_test_split
 
 from data.bars_and_stripes import generate_bars_and_stripes
 from data.hidden_manifold import generate_hidden_manifold_model
@@ -14,7 +15,7 @@ from data.mnist import generate_mnist
 from data.two_curves import generate_two_curves
 
 from vqc.tsp import solve
-from data_reuploading import DataReuploadingClassifier, IQPDataReuploading
+from data_reuploading import DataReuploadingClassifier#, IQPDataReuploading, DataReuploadingRX
 from iqp_variational import IQPVariationalClassifier
 from iqp_kernel import IQPKernelClassifier
 from finBench import create_finbench_cd2, create_finbench_ld1, create_finbench_cf1, create_finbench_cc3
@@ -26,7 +27,7 @@ tsp_max_iter = 2000
 
 # List of params for the project
 dataset_list = [
-        {"dataset-seed": 1234, "dataset": "linearly-separable", "order-seed": 1234, "models-trained": 100, "dimension": 20, "margin": 0.4, "gen_noise": False, "n_train":300, "n_test":300, "permutation":None},
+        {"dataset-seed": 42, "dataset": "linearly-separable", "order-seed": 1234, "models-trained": 100, "dimension": 10, "margin": 0.2, "gen_noise": False, "n_train":240, "n_test":60, "permutation":None},
         {"dataset-seed": 1234, "dataset": "bars-and-stripes", "order-seed": 1234, "models-trained": 100,"height": 4, "width": 5, "noise-std":0.5, "gen_noise": False, "n_train":1000, "n_test":1000, "permutation":None},
         {"dataset-seed": 1234, "dataset": "hidden-manifold", "order-seed": 1234, "models-trained": 100, "dimension": 20, "manifold_dimension": 6, "gen_noise": False, "n_train":300, "n_test":300, "permutation": None},
         {"dataset-seed": 1234, "dataset": "two-curves", "order-seed": 1234, "models-trained": 100, "n_features": 20, "degree":5, "offset":0.1, "noise":0.01, "gen_noise": False, "n_train":300, "n_test":300, "permutation":None},
@@ -83,12 +84,13 @@ def get_dataset(param):
             X_data = np.array(X_data)
             y_data = np.array(y_data)
 
-            X_data, y_data = shuffle(X_data, y_data)
+            #X_data, y_data = shuffle(X_data, y_data)
 
-            X, X_test = X_data[:param["n_train"]], X_data[param["n_train"]:]
-            y, y_test = y_data[:param["n_train"]], y_data[param["n_train"]:]
+            #X, X_test = X_data[:param["n_train"]], X_data[param["n_train"]:]
+            #y, y_test = y_data[:param["n_train"]], y_data[param["n_train"]:]
 
-            X_test = np.array(X_test)
+            X, X_test, y, y_test = train_test_split(X_data, y_data, test_size = 0.2)
+            #X_test = np.array(X_test)
             filename= 'linearly_separable_dist'
         case "pca-mnist":
             X, X_test, y, y_test = generate_mnist(0, 1, 'pca', param["dimension"], param["n_train"], param["dimension"])
@@ -126,11 +128,20 @@ def get_model(model_params, seed = None):
             model = DataReuploadingClassifier(
                         n_layers=model_params["n_layers"],
                         observable_type=model_params["observable_type"],
+                        convergence_interval=model_params["convergence_interval"],
+                        max_steps=model_params["max_steps"],
+                        learning_rate=model_params["learning_rate"],
+                        random_state = 42)
+        case "drx":
+            model = DataReuploadingRX(
+                        n_layers=model_params["n_layers"],
+                        observable_type=model_params["observable_type"],
                         entangling_layer=model_params["entanglement_pattern"],
                         convergence_interval=model_params["convergence_interval"],
                         max_steps=model_params["max_steps"],
                         learning_rate=model_params["learning_rate"],
                         random_state = seed)
+
         case "iqvc":
             model = IQPVariationalClassifier(
                         n_layers=model_params["n_layers"],
@@ -183,40 +194,34 @@ def solve_params(data_params, model_params, random_seeds):
                 symmetry = True
             perms = create_permutations(len(X[0]), data_params["order-seed"], symmetry, data_params["models-trained"])
     else:
-        perms = data_params["models-trained"]* [data_params["permutation"]]
+        perms = data_params["models-trained"] * [data_params["permutation"]]
 
     i = 0
 
     test_acc = []
     train_acc = []
     results = []
+
     for p, i in zip(perms, range(len(perms))):
-        print("Permutation: {0}".format(p))
-        model = get_model(model_params, random_seeds[i])
+        model = get_model(model_params, None)
         X_perm = X[:, p]
         X_test_perm = X_test[:, p]
 
         try:
-            model.fit(X_perm, y, X_test_perm, y_test)
+            model.fit(X_perm, y)
         except Exception as e:
+            print(e)
+            results.append([list(p), None, None])#, model.train_acc_history, model.test_acc_history, model.loss_history])
             continue
 
-        train_acc.append(model.score(X_perm, y))
-        test_acc.append(model.score(X_test_perm, y_test))
 
-        print("Train: {0}".format(train_acc[-1]))
-        print("Test: {0}".format(test_acc[-1]))
-        results.append([list(p), model.train_acc_history, model.test_acc_history, model.loss_history_])
+        train_acc = model.score(X_perm, y)
+        test_acc = model.score(X_test_perm, y_test)
 
-    print("Averages for permutation: {0}".format(p))
-    print("Test - Avg:{0} Min:{1} Max: {2}".format(np.average(test_acc), np.min(test_acc), np.max(test_acc)))
-    print("Train - Avg:{0} Min:{1} Max: {2}".format(np.average(train_acc), np.min(train_acc), np.max(train_acc)))
+        results.append([list(p), train_acc, test_acc])#, model.train_acc_history, model.test_acc_history, model.loss_history_])
+        print(results[-1])
 
-    return
-
-    with open("results/"+ data_params["dataset"] + "_kernel_results.txt", "w") as f:
-        for r in results:
-            f.write(str(r[0]) + " ; " + str(r[1]) + " ; " + str(r[2]) + " ; " + str(r[3]) + " \n")
+    return results
 
 if __name__ == "__main__":
     random_seeds = np.random.randint(0, 9999999, size = 50)
@@ -225,5 +230,5 @@ if __name__ == "__main__":
     #model_info = {"model": "iqk"}
 
     for d in dataset_list:
-        model_info = {"model": "drc", "n_layers": 5, "observable_type": "single", "convergence_interval": 600, "max_steps": 10000, "learning_rate": 0.01, "random_state": np.random.randint(0, 100000)}
+        model_info = {"model": "drc", "n_layers": 10, "observable_type": "full", "convergence_interval": 200, "max_steps": 10000, "learning_rate": 0.01, "random_state": np.random.randint(0, 100000)}
         solve_params(d, model_info, random_seeds = random_seeds)
