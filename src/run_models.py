@@ -209,17 +209,14 @@ def solve_params(data_params, model_params, random_seeds):
 
         try:
             model.fit(X_perm, y)
-        except Exception as e:
-            print(e)
-            results.append([list(p), None, None])#, model.train_acc_history, model.test_acc_history, model.loss_history])
+        except Exception as e: # Model raises a convergence error
+            results.append([list(p), -100, -200])#, model.train_acc_history, model.test_acc_history, model.loss_history])
             continue
-
 
         train_acc = model.score(X_perm, y)
         test_acc = model.score(X_test_perm, y_test)
 
         results.append([list(p), train_acc, test_acc])#, model.train_acc_history, model.test_acc_history, model.loss_history_])
-        print(results[-1])
 
     return results
 
