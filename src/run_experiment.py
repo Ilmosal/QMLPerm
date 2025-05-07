@@ -1,5 +1,8 @@
 from dask import delayed
 from dask import compute
+from dask.distributed import Client
+import copy
+
 import json
 import numpy as np
 from run_models import solve_params
@@ -17,11 +20,18 @@ class NpEncoder(json.JSONEncoder):
 def store_results(res):
     dataset, model, results = res
     file_name = ""
+    perm = ""
+
+    if dataset["permutation"] is None:
+        perm = "rand_"
+
+    if dataset["gen_noise"]:
+        perm = "advperm_"
 
     if model["model"] == "drc":
-        file_name = "exp_results/{0}_{1}_{2}_{3}_results.json".format(dataset['dataset'], model['model'], model['entanglement_pattern'], model['observable_type'])
+        file_name = "exp_results/{0}{1}_{2}_{3}_{4}_{5}_results.json".format(perm, dataset['dataset'], dataset["dimension"], model['model'], model['entanglement_pattern'], model['observable_type'])
     elif model["model"] == "iqvc":
-        file_name = "exp_results/{0}_{1}_results.json".format(dataset['dataset'], model['model'])
+        file_name = "exp_results/{0}{1}_{2}_results.json".format(perm, dataset['dataset'], dataset["dimension"], model['model'])
 
     result_object = {
         "dataset": dataset,
@@ -33,8 +43,11 @@ def store_results(res):
         json.dump(result_object, fp, cls=NpEncoder)
 
 def processDataset(dataset, model):
-    ### Do something to the dataset 
-    seeds_for_models = np.random.randint(0, 9999999, size=dataset['models-trained'])
+    required_seeds = dataset['models-trained']
+    if dataset['gen_noise']:
+        required_seeds *= 4
+
+    seeds_for_models = np.random.randint(0, 9999999, size=required_seeds)
     return [dataset, model, solve_params(dataset, model, seeds_for_models)]
 
 def find_hyperparameter_search(dataset, model, seeds_for_model):
@@ -64,86 +77,87 @@ def find_hyperparameter_search(dataset, model, seeds_for_model):
 
 if __name__ == "__main__":
     list_of_delayed_functions = []
+    models_trained = 50
     problem_params = [
             [
-                {"dataset-seed": 1234, "dataset": "linearly-separable", "order-seed": 1234, "models-trained": 30, "dimension": 15, "margin": 0.3, "gen_noise": False, "n_train":300, "n_test":300, "permutation":None},
-                [   ["drc", 0.001, 5, "circle", "single"],
-                    ["drc", 0.1, 1, "block", "single"],
-                    ["drc", 0.1, 5, "block", "full"],
-                    ["drc", 0.01, 5, "circle", "full"],
-                ]
-            ],
-            [
-                {"dataset-seed": 1234, "dataset": "bars-and-stripes", "order-seed": 1234, "models-trained": 30,"height": 4, "width": 4, "noise-std":0.5, "gen_noise": False, "n_train":1000, "n_test":1000, "permutation":None},
-                [   ["drc", 0.01, 5, "circle", "single"],
-                    ["drc", 0.01, 15, "block", "single"],
-                    ["drc", 0.01, 15, "block", "full"],
-                    ["drc", 0.01, 15, "circle", "full"],
-                ]
-            ],
-            [
-                {"dataset-seed": 1234, "dataset": "hidden-manifold", "order-seed": 1234, "models-trained": 30, "dimension": 15, "manifold_dimension": 6, "gen_noise": False, "n_train":300, "n_test":300, "permutation": None},
+#                {"dataset-seed": 1234, "dataset": "linearly-separable", "order-seed": 1234, "models-trained": models_trained, "dimension": 15, "margin": 0.3, "gen_noise": False, "n_train":300, "n_test":300, "permutation":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]},
+#                [   ["drc", 0.001, 5, "circle", "single"],
+#                    ["drc", 0.1, 1, "block", "single"],
+#                    ["drc", 0.1, 5, "block", "full"],
+#                    ["drc", 0.01, 5, "circle", "full"],
+#                ]
+#            ],
+#            [
+#                {"dataset-seed": 1234, "dataset": "bars-and-stripes", "order-seed": 1234, "models-trained": models_trained,"height": 4, "width": 4, "noise-std":0.5, "gen_noise": False, "n_train":1000, "n_test":1000, "permutation":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]},
+#                [   ["drc", 0.01, 5, "circle", "single"],
+#                    ["drc", 0.01, 15, "block", "single"],
+#                    ["drc", 0.01, 15, "block", "full"],
+#                    ["drc", 0.01, 15, "circle", "full"],
+#                ]
+#            ],
+#            [
+                {"dataset-seed": 1234, "dataset": "hidden-manifold", "order-seed": 1234, "models-trained": models_trained, "dimension": 10, "manifold_dimension": 6, "gen_noise": True, "n_train":300, "n_test":300, "permutation": None},
                 [   ["drc", 0.01, 5, "circle", "single"],
                     ["drc", 0.01, 10, "block", "single"],
                     ["drc", 0.01, 1, "block", "full"],
                     ["drc", 0.001, 5, "circle", "full"],
                 ]
             ],
-            [
-                {"dataset-seed": 1234, "dataset": "hyperplanes-parity", "order-seed": 1234, "models-trained": 30, "dimension": 15, "n_hyperplanes": 2, "dim_hyperplanes": 2, "gen_noise": False, "n_train":1000, "n_test":1000, "permutation": None},
-                [   ["drc", 0.001, 10, "circle", "single"],
-                    ["drc", 0.1, 5, "block", "single"],
-                    ["drc", 0.001, 15, "block", "full"],
-                    ["drc", 0.01, 15, "circle", "full"],
-                ]
-            ],
-            [
-                {"dataset":"fin-bench-cd2", "order-seed": 1234, "models-trained": 30, "gen_noise": False, "permutation":None},
-                [   ["drc", 0.01, 5, "circle", "single"],
-                    ["drc", 0.01, 10, "block", "single"],
-                    ["drc", 0.01, 5, "block", "full"],
-                    ["drc", 0.01, 5, "circle", "full"],
-                ]
-            ],
-            [
-                {"dataset":"fin-bench-ld1", "order-seed": 1234, "models-trained": 30, "gen_noise": False, "permutation":None},
-                [   ["drc", 0.01, 15, "circle", "single"],
-                    ["drc", 0.01, 10, "block", "single"],
-                    ["drc", 0.01, 15, "block", "full"],
-                    ["drc", 0.01, 5, "circle", "full"],
-                ]
-            ],
-            [
-                {"dataset":"fin-bench-cf1", "order-seed": 1234, "models-trained": 30, "gen_noise": False, "permutation":None},
-                [   ["drc", 0.01, 5, "circle", "single"],
-                    ["drc", 0.01, 10, "block", "single"],
-                    ["drc", 0.001, 15, "block", "full"],
-                    ["drc", 0.01, 15, "circle", "full"],
-                ]
-            ],
-            [
-                {"dataset":"fin-bench-cc3", "order-seed": 1234, "models-trained": 30, "gen_noise": False, "permutation":None},
-                [   ["drc", 0.01, 5, "circle", "single"],
-                    ["drc", 0.01, 5, "block", "single"],
-                    ["drc", 0.1, 1, "block", "full"],
-                    ["drc", 0.01, 5, "circle", "full"],
-                ]
-            ],
-            [
-                {"dataset-seed": 1234, "dataset": "linearly-separable", "order-seed": 1234, "models-trained": 30, "dimension": 10, "margin": 0.4, "gen_noise": False, "n_train":300, "n_test":300, "permutation":None},
-                [   ["iqvc", 0.01, 5],
-                ],
-            ],
-            [
-                {"dataset-seed": 1234, "dataset": "hidden-manifold", "order-seed": 1234, "models-trained": 30, "dimension": 10, "manifold_dimension": 6, "gen_noise": False, "n_train":300, "n_test":300, "permutation": None},
-                [   ["iqvc", 0.001, 10],
-                ],
-            ],
-            [
-                {"dataset-seed": 1234, "dataset": "hyperplanes-parity", "order-seed": 1234, "models-trained": 30, "dimension": 10, "n_hyperplanes": 2, "dim_hyperplanes": 2, "gen_noise": False, "n_train":1000, "n_test":1000, "permutation": None},
-                [   ["iqvc", 0.1, 15],
-                ],
-            ],
+#            [
+#                {"dataset-seed": 1234, "dataset": "hyperplanes-parity", "order-seed": 1234, "models-trained": models_trained, "dimension": 15, "n_hyperplanes": 2, "dim_hyperplanes": 2, "gen_noise": False, "n_train":1000, "n_test":1000, "permutation": None},
+#                [   ["drc", 0.001, 10, "circle", "single"],
+#                    ["drc", 0.1, 5, "block", "single"],
+#                    ["drc", 0.001, 15, "block", "full"],
+#                    ["drc", 0.01, 15, "circle", "full"],
+#                ]
+#            ],
+#            [
+#                {"dataset":"fin-bench-cd2", "order-seed": 1234, "models-trained": models_trained, "gen_noise": False, "permutation":None},
+#                [   ["drc", 0.01, 5, "circle", "single"],
+#                    ["drc", 0.01, 10, "block", "single"],
+#                    ["drc", 0.01, 5, "block", "full"],
+#                    ["drc", 0.01, 5, "circle", "full"],
+#                ]
+#            ],
+#            [
+#                {"dataset":"fin-bench-ld1", "order-seed": 1234, "models-trained": models_trained, "gen_noise": False, "permutation":None},
+#                [   ["drc", 0.01, 15, "circle", "single"],
+#                    ["drc", 0.01, 10, "block", "single"],
+#                    ["drc", 0.01, 15, "block", "full"],
+#                    ["drc", 0.01, 5, "circle", "full"],
+#                ]
+#            ],
+#            [
+#                {"dataset":"fin-bench-cf1", "order-seed": 1234, "models-trained": models_trained, "gen_noise": False, "permutation":None},
+#                [   ["drc", 0.01, 5, "circle", "single"],
+#                    ["drc", 0.01, 10, "block", "single"],
+#                    ["drc", 0.001, 15, "block", "full"],
+#                    ["drc", 0.01, 15, "circle", "full"],
+#                ]
+#            ],
+#            [
+#                {"dataset":"fin-bench-cc3", "order-seed": 1234, "models-trained": models_trained, "gen_noise": False, "permutation":None},
+#                [   ["drc", 0.01, 5, "circle", "single"],
+#                    ["drc", 0.01, 5, "block", "single"],
+#                    ["drc", 0.1, 1, "block", "full"],
+#                    ["drc", 0.01, 5, "circle", "full"],
+#                ]
+#            ],
+#            [
+#                {"dataset-seed": 1234, "dataset": "linearly-separable", "order-seed": 1234, "models-trained": models_trained, "dimension": 10, "margin": 0.4, "gen_noise": False, "n_train":300, "n_test":300, "permutation":None},
+#                [   ["iqvc", 0.01, 5],
+#                ],
+#            ],
+#            [
+#                {"dataset-seed": 1234, "dataset": "hidden-manifold", "order-seed": 1234, "models-trained": models_trained, "dimension": 10, "manifold_dimension": 6, "gen_noise": False, "n_train":300, "n_test":300, "permutation": None},
+#                [   ["iqvc", 0.001, 10],
+#                ],
+#            ],
+#            [
+#                {"dataset-seed": 1234, "dataset": "hyperplanes-parity", "order-seed": 1234, "models-trained": models_trained, "dimension": 10, "n_hyperplanes": 2, "dim_hyperplanes": 2, "gen_noise": False, "n_train":1000, "n_test":1000, "permutation": None},
+#                [   ["iqvc", 0.1, 15],
+#                ],
+#            ],
     ]
 
     models = {
@@ -154,7 +168,7 @@ if __name__ == "__main__":
 
     for dataset, model_params in problem_params:
         for m in model_params:
-            model = models[m[0]]
+            model = copy.deepcopy(models[m[0]])
 
             if m[0] == "drc":
                 model["learning_rate"] = m[1]
@@ -165,10 +179,13 @@ if __name__ == "__main__":
                 model["learning_rate"] = m[1]
                 model["n_layers"] = m[2]
 
-            list_of_delayed_functions.append(delayed(processDataset)(dataset, model))
+            d_cpy = copy.deepcopy(dataset)
+
+            list_of_delayed_functions.append(delayed(processDataset)(d_cpy, model))
 
     ### This starts the execution with the resources available
     results = compute(list_of_delayed_functions)
 
     for r in results[0]:
         store_results(r)
+

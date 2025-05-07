@@ -84,13 +84,7 @@ def get_dataset(param):
             X_data = np.array(X_data)
             y_data = np.array(y_data)
 
-            #X_data, y_data = shuffle(X_data, y_data)
-
-            #X, X_test = X_data[:param["n_train"]], X_data[param["n_train"]:]
-            #y, y_test = y_data[:param["n_train"]], y_data[param["n_train"]:]
-
             X, X_test, y, y_test = train_test_split(X_data, y_data, test_size = 0.2)
-            #X_test = np.array(X_test)
             filename= 'linearly_separable_dist'
         case "pca-mnist":
             X, X_test, y, y_test = generate_mnist(0, 1, 'pca', param["dimension"], param["n_train"], param["dimension"])
@@ -131,7 +125,7 @@ def get_model(model_params, seed = None):
                         convergence_interval=model_params["convergence_interval"],
                         max_steps=model_params["max_steps"],
                         learning_rate=model_params["learning_rate"],
-                        random_state = 42)
+                        random_state = seed)
         case "drx":
             model = DataReuploadingRX(
                         n_layers=model_params["n_layers"],
@@ -187,14 +181,14 @@ def solve_params(data_params, model_params, random_seeds):
 
     if data_params["permutation"] is None:
         if data_params["gen_noise"]:
-            perms = noise_data_perms(len(X[0]))
+            perms = noise_data_perms(len(X[0]), data_params["models-trained"])
         else:
             symmetry = False
             if model_params["model"] == "iqp":
                 symmetry = True
             perms = create_permutations(len(X[0]), data_params["order-seed"], symmetry, data_params["models-trained"])
     else:
-        perms = data_params["models-trained"] * [data_params["permutation"]]
+        perms = data_params["models-trained"] * [np.array(data_params["permutation"])]
 
     i = 0
 
@@ -202,21 +196,21 @@ def solve_params(data_params, model_params, random_seeds):
     train_acc = []
     results = []
 
-    for p, i in zip(perms, range(len(perms))):
-        model = get_model(model_params, None)
+   for p, i in zip(perms, range(len(perms))):
+        model = get_model(model_params, random_seeds[i])
         X_perm = X[:, p]
         X_test_perm = X_test[:, p]
 
         try:
             model.fit(X_perm, y)
         except Exception as e: # Model raises a convergence error
-            results.append([list(p), -100, -200])#, model.train_acc_history, model.test_acc_history, model.loss_history])
+            results.append([list(p), -100, -200])
             continue
 
         train_acc = model.score(X_perm, y)
         test_acc = model.score(X_test_perm, y_test)
 
-        results.append([list(p), train_acc, test_acc])#, model.train_acc_history, model.test_acc_history, model.loss_history_])
+        results.append([list(p), train_acc, test_acc])
 
     return results
 

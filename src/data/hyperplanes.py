@@ -63,7 +63,7 @@ def generate_hyperplanes_parity(n_samples, n_features, n_hyperplanes, dim_hyperp
 
     # hack: initially create more data than we need,
     # and then subselect to get balanced classes
-    X = np.random.normal(size=(4 * n_samples, dim_hyperplanes))
+    X = np.random.normal(size=(10 * n_samples, dim_hyperplanes))
     y = np.array([predict(x, weights, biases) for x in X])
     A = X[y == 1]
     B = X[y == -1]
