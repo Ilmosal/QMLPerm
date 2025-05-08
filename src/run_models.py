@@ -15,7 +15,7 @@ from data.mnist import generate_mnist
 from data.two_curves import generate_two_curves
 
 from vqc.tsp import solve
-from data_reuploading import DataReuploadingClassifier#, IQPDataReuploading, DataReuploadingRX
+from data_reuploading import DataReuploadingClassifier
 from iqp_variational import IQPVariationalClassifier
 from iqp_kernel import IQPKernelClassifier
 from finBench import create_finbench_cd2, create_finbench_ld1, create_finbench_cf1, create_finbench_cc3
@@ -70,7 +70,12 @@ def get_dataset(param):
 
             filename= 'hidden_manifold_dist'
         case "hyperplanes-parity":
-            X_data, y_data = generate_hyperplanes_parity(param["n_train"]+param["n_test"], param["dimension"], param["n_hyperplanes"], param["dim_hyperplanes"])
+            for i in range(20): #This function doesn't always generate balanced classes and crashes due to it so repeat 20 times to make sure that it succeeds
+                try:
+                    X_data, y_data = generate_hyperplanes_parity(param["n_train"]+param["n_test"], param["dimension"], param["n_hyperplanes"], param["dim_hyperplanes"])
+                    break
+                except:
+                    continue
 
             X_data, y_data = shuffle(X_data, y_data)
 
@@ -126,24 +131,6 @@ def get_model(model_params, seed = None):
                         max_steps=model_params["max_steps"],
                         learning_rate=model_params["learning_rate"],
                         random_state = seed)
-        case "drx":
-            model = DataReuploadingRX(
-                        n_layers=model_params["n_layers"],
-                        observable_type=model_params["observable_type"],
-                        entangling_layer=model_params["entanglement_pattern"],
-                        convergence_interval=model_params["convergence_interval"],
-                        max_steps=model_params["max_steps"],
-                        learning_rate=model_params["learning_rate"],
-                        random_state = seed)
-
-        case "iqvc":
-            model = IQPVariationalClassifier(
-                        n_layers=model_params["n_layers"],
-                        convergence_interval=model_params["convergence_interval"],
-                        max_steps=model_params["max_steps"],
-                        learning_rate=model_params["learning_rate"],
-                        random_state = seed
-                    )
         case "iqk":
             model = IQPKernelClassifier()
         case "aqk":
@@ -196,7 +183,7 @@ def solve_params(data_params, model_params, random_seeds):
     train_acc = []
     results = []
 
-   for p, i in zip(perms, range(len(perms))):
+    for p, i in zip(perms, range(len(perms))):
         model = get_model(model_params, random_seeds[i])
         X_perm = X[:, p]
         X_test_perm = X_test[:, p]
