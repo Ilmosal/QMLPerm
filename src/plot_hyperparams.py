@@ -50,7 +50,6 @@ for i in range(len(p_vals)):
     else:
         plt_labels[i+1] += "\np={0:.2G}".format(p_vals[i])
 
-
 space = 0.2
 
 for i in range(len(binned_results)):

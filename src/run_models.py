@@ -150,8 +150,6 @@ def get_model(model_params, seed = None):
 def create_permutations(num_features, order_seed, symmetric = False, models_trained = 100):
     np.random.seed(order_seed)
     perms = []
-    # default order
-    perms.append(np.arange(num_features))
 
     # random orders
     while(len(perms) != models_trained):
@@ -188,8 +186,10 @@ def solve_params(data_params, model_params, random_seeds):
         X_perm = X[:, p]
         X_test_perm = X_test[:, p]
 
+        model.fit(X_perm, y)
         try:
             model.fit(X_perm, y)
+            print("test")
         except Exception as e: # Model raises a convergence error
             results.append([list(p), -100, -200])
             continue

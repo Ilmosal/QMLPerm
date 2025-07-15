@@ -63,6 +63,33 @@ for r, i in zip(results, range(len(results))):
             if dp[2] != -200:
                 binned_results[i][3].append(dp[2])
 
+p_vals = []
+
+for i in range(5):
+    result_stats_1 = scipy.stats.ttest_ind(binned_results[i][0], binned_results[i][1], equal_var=False)
+    result_stats_2 = scipy.stats.ttest_ind(binned_results[i][0], binned_results[i][2], equal_var=False)
+    result_stats_3 = scipy.stats.ttest_ind(binned_results[i][0], binned_results[i][3], equal_var=False)
+
+    p_vals.append([result_stats_1.pvalue, result_stats_2.pvalue, result_stats_3.pvalue])
+
+for i in range(len(p_vals)):
+    add_str = "\n"
+    for a in range(3):
+        match a:
+            0:
+                add_str += "$p_S$="
+            0:
+                add_str += "$p_E$="
+            0:
+                add_str += "$p_R$="
+
+        if p_vals[i][a] > 0.0001:
+            add_str += "{0:.4f}\n".format(p_vals[i][a])
+        else:
+            add_str += "{0:.2G}\n".format(p_vals[i][a])
+
+    plot_labels[i] += add_str
+
 space = 0.10
 
 for i in range(len(results)):

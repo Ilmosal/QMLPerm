@@ -9,12 +9,12 @@ results = None
 results = []
 
 plot_labels = [
-    '15\np =\n1.75e-18',
-    '18\np =\n1.11e-21',
-    '21\np =\n1.82e-10',
-    '24\np =\n5.71e-17',
-    '27\np =\n5.09e-05',
-    '30\np =\n0.1606',
+    '15\np =',
+    '18\np =',
+    '21\np =',
+    '24\np =',
+    '27\np =',
+    '30\np =',
 ]
 
 for i in range(15, 31, 3):
@@ -34,6 +34,18 @@ for r, i in zip(results, range(len(results))):
     for dp in r[1]["results"]:
         if dp[2] != -200:
             binned_results[i][1].append(dp[2])
+
+p_vals = []
+
+for i in range(5):
+    result_stats = scipy.stats.ttest_ind(binned_results[i][0], binned_results[i][1], equal_var=False)
+    p_vals.append(result_stats.pvalue)
+
+for i in range(len(p_vals)):
+    if p_vals[i] > 0.0001:
+        plot_labels[i] += "\np={0:.4f}".format(p_vals[i])
+    else:
+        plot_labels[i] += "\np={0:.2G}".format(p_vals[i])
 
 space = 0.2
 
