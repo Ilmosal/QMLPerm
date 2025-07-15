@@ -23,29 +23,6 @@ from noise_data import generate_noisy_dataset, noise_data_perms
 from alt_kernel import AltKernelClassifier
 from model_utils import accuracy
 
-tsp_max_iter = 2000
-
-# List of params for the project
-dataset_list = [
-        {"dataset-seed": 42, "dataset": "linearly-separable", "order-seed": 1234, "models-trained": 100, "dimension": 10, "margin": 0.2, "gen_noise": False, "n_train":240, "n_test":60, "permutation":None},
-        {"dataset-seed": 1234, "dataset": "bars-and-stripes", "order-seed": 1234, "models-trained": 100,"height": 4, "width": 5, "noise-std":0.5, "gen_noise": False, "n_train":1000, "n_test":1000, "permutation":None},
-        {"dataset-seed": 1234, "dataset": "hidden-manifold", "order-seed": 1234, "models-trained": 100, "dimension": 20, "manifold_dimension": 6, "gen_noise": False, "n_train":300, "n_test":300, "permutation": None},
-        {"dataset-seed": 1234, "dataset": "two-curves", "order-seed": 1234, "models-trained": 100, "n_features": 20, "degree":5, "offset":0.1, "noise":0.01, "gen_noise": False, "n_train":300, "n_test":300, "permutation":None},
-        {"dataset-seed": 1234, "dataset": "hyperplanes-parity", "order-seed": 1234, "models-trained": 100, "dimension": 10, "n_hyperplanes": 2, "dim_hyperplanes": 2, "gen_noise": False, "n_train":1000, "n_test":1000, "permutation": None},
-        {"dataset":"fin-bench-cd2", "order-seed": 1234, "models-trained": 100, "gen_noise": False, "permutation":None},
-        {"dataset":"fin-bench-ld1", "order-seed": 1234, "models-trained": 100, "gen_noise": False, "permutation":None},
-        {"dataset":"fin-bench-cf1", "order-seed": 1234, "models-trained": 100, "gen_noise": False, "permutation":None},
-        {"dataset":"fin-bench-cc3", "order-seed": 1234, "models-trained": 100, "gen_noise": False, "permutation":None},
-]
-
-vqc_params = {"max_steps": 10000, "n_layers": 5, "observable_type": "single", "convergence_interval":600}
-models = [
-        {"model": "drc", "n_layers": 5, "observable_type": "single", "entanglement_pattern":"block", "convergence_interval": 600, "max_steps": 10000, "learning_rate": 0.01, "random_state": np.random.randint(0, 100000)},
-    {"model": "drc", "n_layers": 5, "observable_type": "full", "entanglement_pattern":"block", "convergence_interval": 600, "max_steps": 10000, "learning_rate": 0.01, "random_state": np.random.randint(0, 100000)},
-    {"model": "drc", "n_layers": 5, "observable_type": "single", "entanglement_pattern": "ring", "convergence_interval": 600, "max_steps": 10000, "learning_rate": 0.01, "random_state": np.random.randint(0, 100000)},
-    {"model": "drc", "n_layers": 5, "observable_type": "full", "entanglement_pattern": "ring", "convergence_interval": 600, "max_steps": 10000, "learning_rate": 0.01, "random_state": np.random.randint(0, 100000)},
-]
-
 def get_dataset(param):
     if "dataset-seed" in param:
         np.random.seed(param["dataset-seed"])
@@ -143,6 +120,15 @@ def get_model(model_params, seed = None):
                     max_steps=model_params["max_steps"],
                     learning_rate=model_params["learning_rate"],
                     random_state = seed)
+        case "iqvc":
+            model = IQPVariationalClassifier(
+                        n_layers=model_params["n_layers"],
+                        convergence_interval=model_params["convergence_interval"],
+                        max_steps=model_params["max_steps"],
+                        learning_rate=model_params["learning_rate"],
+                        random_state = seed,
+                        repeats=model_params["n_repeats"]
+                    )
 
 
     return model
@@ -186,10 +172,8 @@ def solve_params(data_params, model_params, random_seeds):
         X_perm = X[:, p]
         X_test_perm = X_test[:, p]
 
-        model.fit(X_perm, y)
         try:
             model.fit(X_perm, y)
-            print("test")
         except Exception as e: # Model raises a convergence error
             results.append([list(p), -100, -200])
             continue
@@ -201,12 +185,3 @@ def solve_params(data_params, model_params, random_seeds):
 
     return results
 
-if __name__ == "__main__":
-    random_seeds = np.random.randint(0, 9999999, size = 50)
-    d_info = {"dataset-seed": 1234, "dataset": "hidden-manifold", "order-seed": 1234, "models-trained": 10, "dimension": 15, "manifold_dimension": 3, "gen_noise":False, "n_train": 1000, "n_test":1000}
-    #model_info = {"model": "drc", "n_layers": 5, "observable_type": "full", "convergence_interval": 600, "max_steps": 10000, "learning_rate": 0.01}
-    #model_info = {"model": "iqk"}
-
-    for d in dataset_list:
-        model_info = {"model": "drc", "n_layers": 10, "observable_type": "full", "convergence_interval": 200, "max_steps": 10000, "learning_rate": 0.01, "random_state": np.random.randint(0, 100000)}
-        solve_params(d, model_info, random_seeds = random_seeds)

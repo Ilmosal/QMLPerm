@@ -420,15 +420,15 @@ if __name__ == "__main__":
         if n_models <= 0 or n_models > 10000:
             raise Exception("Invalid n_models: {0}".format(n_models))
 
-        match exp_id:
-            case 0:
-                run_model_experiments(n_models) # Run the experiments for Figures 5 and 6a
-            case 1:
-                run_diff_experiment(n_models) # Run Figure 6b experiment
-            case 2:
-                run_adv_perm_experiment(n_models) # Run Figure 7 experiment
-            case 3:
-                run_hyperparameter_experiment(n_models) # Run Figure 6c experiment
     except Exception as e:
         print("Faulty arguments for the program, give experiment id from 0 to 3 and then the amount of models")
         print("Exception: {0}".format(e))
+    match exp_id:
+        case 0:
+            run_model_experiments(n_models) # Run the experiments for Figures 5 and 6a
+        case 1:
+            run_diff_experiment(n_models) # Run Figure 6b experiment
+        case 2:
+            run_adv_perm_experiment(n_models) # Run Figure 7 experiment
+        case 3:
+            run_hyperparameter_experiment(n_models) # Run Figure 6c experiment
