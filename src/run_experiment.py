@@ -246,15 +246,56 @@ def run_diff_experiment(models_trained):
 
 def run_adv_perm_experiment(models_trained):
     list_of_delayed_functions = []
+
+    def_perm = list(range(20))
+
+    # Perm for every other
+    every_other = list(range(20))
+
+    for i in range(10):
+        every_other[i*2] = i
+        every_other[i*2+1] = i + 10
+
+    # rotation order 
+    rot_perm = list(range(20))
+
+    for i in range(20):
+        rot_perm[i] = (i + 10) % 20
+
     problem_params = [
         [
-            {"dataset-seed": 1234, "dataset": "hidden-manifold", "order-seed": 1234, "models-trained": models_trained, "dimension": 15, "manifold_dimension": 6, "gen_noise": True, "n_train":300, "n_test":300, "permutation": None},
+            {"dataset-seed": 1234, "dataset": "hidden-manifold", "order-seed": 1234, "models-trained": models_trained, "dimension": 10, "manifold_dimension": 6, "gen_noise": True, "n_train":300, "n_test":300, "permutation": None},
                 [   ["drc", 0.01, 5, "circle", "single"],
                     ["drc", 0.01, 10, "block", "single"],
                     ["drc", 0.01, 5, "block", "full"],
                     ["drc", 0.001, 5, "circle", "full"],
             ]
         ],
+        [
+            {"dataset-seed": 1234, "dataset": "hidden-manifold", "order-seed": 1234, "models-trained": models_trained, "dimension": 10, "manifold_dimension": 6, "gen_noise": True, "n_train":300, "n_test":300, "permutation": def_perm},
+                [   ["drc", 0.01, 5, "circle", "single"],
+                    ["drc", 0.01, 10, "block", "single"],
+                    ["drc", 0.01, 5, "block", "full"],
+                    ["drc", 0.001, 5, "circle", "full"],
+            ]
+        ],
+        [
+            {"dataset-seed": 1234, "dataset": "hidden-manifold", "order-seed": 1234, "models-trained": models_trained, "dimension": 10, "manifold_dimension": 6, "gen_noise": True, "n_train":300, "n_test":300, "permutation": rot_perm},
+                [   ["drc", 0.01, 5, "circle", "single"],
+                    ["drc", 0.01, 10, "block", "single"],
+                    ["drc", 0.01, 5, "block", "full"],
+                    ["drc", 0.001, 5, "circle", "full"],
+            ]
+        ],
+        [
+            {"dataset-seed": 1234, "dataset": "hidden-manifold", "order-seed": 1234, "models-trained": models_trained, "dimension": 10, "manifold_dimension": 6, "gen_noise": True, "n_train":300, "n_test":300, "permutation": every_other},
+                [   ["drc", 0.01, 5, "circle", "single"],
+                    ["drc", 0.01, 10, "block", "single"],
+                    ["drc", 0.01, 5, "block", "full"],
+                    ["drc", 0.001, 5, "circle", "full"],
+            ]
+        ],
+
     ]
 
     models = {
@@ -282,8 +323,8 @@ def run_adv_perm_experiment(models_trained):
 
     results = compute(list_of_delayed_functions)
 
-    for r in results[0]:
-        store_results(r, "exp_results_noise")
+    for r, i in zip(results[0], range(len(results[0]))):
+        store_results(r, "exp_results_noise", i)
 
 def run_model_experiments(models_trained):
     list_of_delayed_functions = []
