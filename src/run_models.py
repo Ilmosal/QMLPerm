@@ -170,9 +170,7 @@ def solve_params(data_params, model_params, random_seeds):
         X_test_perm = X_test[:, p]
 
         try:
-            #model.fit(X_perm, y)
-            results.append([list(p), 0.9, 0.8])
-            continue
+            model.fit(X_perm, y)
         except Exception as e: # Model raises a convergence error
             results.append([list(p), -100, -200])
             continue
