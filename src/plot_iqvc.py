@@ -13,13 +13,20 @@ datasets = [
     'hyperplanes-parity',
 ]
 
+dataset_labels = [
+    'linearly-separable\np=7.34e-06',
+    'hidden-manifold\np=0.1580',
+    'hyperplanes-parity\np=0.1196',
+]
+
+
 results = []
 
 for d in datasets:
     results.append([])
     with open("exp_results_iqvc/{0}_iqvc_results.json".format(d), 'r') as f:
         results[-1].append(json.load(f))
-    with open("exp_results_iqvc/perm_{0}_iqvc_results.json".format(d), 'r') as f:
+    with open("exp_results_iqvc/rand_{0}_iqvc_results.json".format(d), 'r') as f:
         results[-1].append(json.load(f))
 space = 0.2
 for r in results:
@@ -71,7 +78,7 @@ for r in results:
         bplot_2["boxes"][0].set_facecolor("green")
 
 plt.title("IQVC-model")
-plt.xticks(ticks = np.arange(3), labels=datasets)
+plt.xticks(ticks = np.arange(3), labels=dataset_labels)
 plt.gcf().set_size_inches(6, 4, forward=True)
 plt.legend(handles=[mpatches.Patch(color="blue", label="Default"), mpatches.Patch(color="green", label="Random")], loc=4)
 

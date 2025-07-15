@@ -15,6 +15,13 @@ datasets = [
     'block_full',
 ]
 
+dataset_labels= [
+        "Single Circle\n$p_S$=1.41e-29\n$p_E$=6.53e-10\n$p_R$=3.59e-10",
+        "Single Block\n$p_S$=1.25e-49\n$p_E$=0.0873\n$p_R$=3.91e-08",
+        "Global Circle\n$p_S$=0.0106\n$p_E$=0.0638\n$p_R$=0.7694",
+        "Global Block\n$p_S$=0.0003\n$p_E$=0.0559\n$p_R$=0.1314"
+]
+
 x_labels = [
     "Default",
     "Swap",
@@ -71,7 +78,7 @@ for i in range(len(results)):
 #plt.subplots_adjust(hspace=0.3)
 
 plt.title("Adversarial Permutation")
-plt.xticks(ticks = np.arange(4), labels=["Single Circle", "Single Block", "Global Circle ", "Global Block"])
+plt.xticks(ticks = np.arange(4), labels=dataset_labels)
 plt.gcf().set_size_inches(6, 4, forward=True)
 plt.legend(handles=[mpatches.Patch(color="blue", label="Default"), mpatches.Patch(color="black", label="Swapped"), mpatches.Patch(color="yellow", label="Every Other"), mpatches.Patch(color="green", label="Random")], loc=4)
 

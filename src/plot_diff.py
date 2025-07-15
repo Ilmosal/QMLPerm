@@ -8,6 +8,15 @@ import sys
 results = None
 results = []
 
+plot_labels = [
+    '15\np =\n1.75e-18',
+    '18\np =\n1.11e-21',
+    '21\np =\n1.82e-10',
+    '24\np =\n5.71e-17',
+    '27\np =\n5.09e-05',
+    '30\np =\n0.1606',
+]
+
 for i in range(15, 31, 3):
     results.append([])
     with open("exp_results_diff_2/hidden-manifold_{0}_drc_circle_single_results.json".format(i), 'r') as f:
@@ -35,7 +44,7 @@ for i in range(len(binned_results)):
     bplot_2["boxes"][0].set_facecolor("green")
 
 plt.title("hidden-manifold")
-plt.xticks(ticks = np.arange(6), labels=["15", "18", "21", "24", "27", "30"])
+plt.xticks(ticks = np.arange(6), labels=plot_labels)
 plt.gcf().set_size_inches(6, 4, forward=True)
 plt.legend(handles=[mpatches.Patch(color="blue", label="Default"), mpatches.Patch(color="green", label="Random")], loc=4)
 
