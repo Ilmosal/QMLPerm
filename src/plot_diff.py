@@ -4,8 +4,8 @@ import matplotlib.patches as mpatches
 import matplotlib.ticker as ticker
 import numpy as np
 import sys
+import scipy
 
-results = None
 results = []
 
 plot_labels = [
@@ -19,9 +19,9 @@ plot_labels = [
 
 for i in range(15, 31, 3):
     results.append([])
-    with open("exp_results_diff_2/hidden-manifold_{0}_drc_circle_single_results.json".format(i), 'r') as f:
+    with open("exp_results_diff/hidden-manifold_{0}_drc_circle_single_results.json".format(i), 'r') as f:
         results[-1].append(json.load(f))
-    with open("exp_results_diff_2/rand_hidden-manifold_{0}_drc_circle_single_results.json".format(i), 'r') as f:
+    with open("exp_results_diff/rand_hidden-manifold_{0}_drc_circle_single_results.json".format(i), 'r') as f:
         results[-1].append(json.load(f))
 
 binned_results = [[[],[]],[[],[]],[[],[]],[[],[]],[[],[]],[[],[]]]
@@ -60,4 +60,5 @@ plt.xticks(ticks = np.arange(6), labels=plot_labels)
 plt.gcf().set_size_inches(6, 4, forward=True)
 plt.legend(handles=[mpatches.Patch(color="blue", label="Default"), mpatches.Patch(color="green", label="Random")], loc=4)
 
+#plt.show()
 plt.savefig("plots/diff_plot.tiff", bbox_inches="tight", dpi=600, format="tiff", pil_kwargs={"compression": "tiff_lzw"})

@@ -267,32 +267,32 @@ def run_adv_perm_experiment(models_trained):
             {"dataset-seed": 1234, "dataset": "hidden-manifold", "order-seed": 1234, "models-trained": models_trained, "dimension": 10, "manifold_dimension": 6, "gen_noise": True, "n_train":300, "n_test":300, "permutation": None},
                 [   ["drc", 0.01, 5, "circle", "single"],
                     ["drc", 0.01, 10, "block", "single"],
-                    ["drc", 0.01, 5, "block", "full"],
                     ["drc", 0.001, 5, "circle", "full"],
+                    ["drc", 0.01, 5, "block", "full"],
             ]
         ],
         [
             {"dataset-seed": 1234, "dataset": "hidden-manifold", "order-seed": 1234, "models-trained": models_trained, "dimension": 10, "manifold_dimension": 6, "gen_noise": True, "n_train":300, "n_test":300, "permutation": def_perm},
                 [   ["drc", 0.01, 5, "circle", "single"],
                     ["drc", 0.01, 10, "block", "single"],
-                    ["drc", 0.01, 5, "block", "full"],
                     ["drc", 0.001, 5, "circle", "full"],
+                    ["drc", 0.01, 5, "block", "full"],
             ]
         ],
         [
             {"dataset-seed": 1234, "dataset": "hidden-manifold", "order-seed": 1234, "models-trained": models_trained, "dimension": 10, "manifold_dimension": 6, "gen_noise": True, "n_train":300, "n_test":300, "permutation": rot_perm},
                 [   ["drc", 0.01, 5, "circle", "single"],
                     ["drc", 0.01, 10, "block", "single"],
-                    ["drc", 0.01, 5, "block", "full"],
                     ["drc", 0.001, 5, "circle", "full"],
+                    ["drc", 0.01, 5, "block", "full"],
             ]
         ],
         [
             {"dataset-seed": 1234, "dataset": "hidden-manifold", "order-seed": 1234, "models-trained": models_trained, "dimension": 10, "manifold_dimension": 6, "gen_noise": True, "n_train":300, "n_test":300, "permutation": every_other},
                 [   ["drc", 0.01, 5, "circle", "single"],
                     ["drc", 0.01, 10, "block", "single"],
-                    ["drc", 0.01, 5, "block", "full"],
                     ["drc", 0.001, 5, "circle", "full"],
+                    ["drc", 0.01, 5, "block", "full"],
             ]
         ],
 

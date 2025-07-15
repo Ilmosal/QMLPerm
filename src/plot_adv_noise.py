@@ -4,6 +4,7 @@ import matplotlib.patches as mpatches
 import matplotlib.ticker as ticker
 import numpy as np
 import sys
+import scipy
 
 results = None
 error_bars = False
@@ -16,10 +17,10 @@ datasets = [
 ]
 
 dataset_labels= [
-        "Single Circle\n$p_S$=1.41e-29\n$p_E$=6.53e-10\n$p_R$=3.59e-10",
-        "Single Block\n$p_S$=1.25e-49\n$p_E$=0.0873\n$p_R$=3.91e-08",
-        "Global Circle\n$p_S$=0.0106\n$p_E$=0.0638\n$p_R$=0.7694",
-        "Global Block\n$p_S$=0.0003\n$p_E$=0.0559\n$p_R$=0.1314"
+        "Single Circle",
+        "Single Block",
+        "Global Circle",
+        "Global Block"
 ]
 
 x_labels = [
@@ -31,9 +32,10 @@ x_labels = [
 
 results = []
 
-for d in datasets:
-    with open("exp_results_noise/advperm_hidden-manifold_drc_{0}_results.json".format(d), 'r') as f:
-        results.append(json.load(f))
+for d, val in zip(datasets, range(len(datasets))):
+    for i in range(4):
+        with open("exp_results_noise/advperm_hidden-manifold_10_drc_{0}_results_{1}.json".format(d, 4*i+val), 'r') as f:
+            results.append(json.load(f))
 
 fig, axes = plt.subplots(1, 1)
 
@@ -49,23 +51,34 @@ binned_results = [[[],[],[],[]],[[],[],[],[]],[[],[],[],[]],[[],[],[],[]]]
 
 # Binning DO NOT COMBINE DIFFERENT ANSATZES
 for r, i in zip(results, range(len(results))):
+    bin_id = -1
+    if r['model']["entanglement_pattern"] == 'circle':
+        if r['model']["observable_type"] == 'single':
+            bin_id = 0
+        else:
+            bin_id = 2
+    else:
+        if r['model']["observable_type"] == 'single':
+            bin_id = 1
+        else:
+            bin_id = 3
+
     for dp in r["results"]:
         if dp[0] == def_perm:
             if dp[2] != -200:
-                binned_results[i][0].append(dp[2])
+                binned_results[bin_id][0].append(dp[2])
         elif dp[0] == rotation_order:
             if dp[2] != -200:
-                binned_results[i][1].append(dp[2])
+                binned_results[bin_id][1].append(dp[2])
         elif dp[0] == every_other:
             if dp[2] != -200:
-                binned_results[i][2].append(dp[2])
+                binned_results[bin_id][2].append(dp[2])
         else:
             if dp[2] != -200:
-                binned_results[i][3].append(dp[2])
-
+                binned_results[bin_id][3].append(dp[2])
 p_vals = []
 
-for i in range(5):
+for i in range(4):
     result_stats_1 = scipy.stats.ttest_ind(binned_results[i][0], binned_results[i][1], equal_var=False)
     result_stats_2 = scipy.stats.ttest_ind(binned_results[i][0], binned_results[i][2], equal_var=False)
     result_stats_3 = scipy.stats.ttest_ind(binned_results[i][0], binned_results[i][3], equal_var=False)
@@ -76,11 +89,11 @@ for i in range(len(p_vals)):
     add_str = "\n"
     for a in range(3):
         match a:
-            0:
+            case 0:
                 add_str += "$p_S$="
-            0:
+            case 1:
                 add_str += "$p_E$="
-            0:
+            case 2:
                 add_str += "$p_R$="
 
         if p_vals[i][a] > 0.0001:
@@ -88,11 +101,11 @@ for i in range(len(p_vals)):
         else:
             add_str += "{0:.2G}\n".format(p_vals[i][a])
 
-    plot_labels[i] += add_str
+    dataset_labels[i] += add_str
 
 space = 0.10
 
-for i in range(len(results)):
+for i in range(len(binned_results)):
     bplot_1 = plt.boxplot(binned_results[i][0], positions = [i-3*space], patch_artist=True)
     bplot_2 = plt.boxplot(binned_results[i][1], positions = [i-space], patch_artist=True)
     bplot_3 = plt.boxplot(binned_results[i][2], positions = [i+space], patch_artist=True)
@@ -109,4 +122,5 @@ plt.xticks(ticks = np.arange(4), labels=dataset_labels)
 plt.gcf().set_size_inches(6, 4, forward=True)
 plt.legend(handles=[mpatches.Patch(color="blue", label="Default"), mpatches.Patch(color="black", label="Swapped"), mpatches.Patch(color="yellow", label="Every Other"), mpatches.Patch(color="green", label="Random")], loc=4)
 
+#plt.show()
 plt.savefig("plots/adv_noise_plot.tiff", bbox_inches="tight", dpi=600, format="tiff", pil_kwargs={"compression": "tiff_lzw"})

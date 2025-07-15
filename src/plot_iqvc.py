@@ -72,5 +72,5 @@ plt.xticks(ticks = np.arange(3), labels=plot_labels)
 plt.gcf().set_size_inches(6, 4, forward=True)
 plt.legend(handles=[mpatches.Patch(color="blue", label="Default"), mpatches.Patch(color="green", label="Random")], loc=4)
 
-plt.show()
-#plt.savefig("plots/iqvc_plot.tiff", bbox_inches="tight", dpi=600, format="tiff", pil_kwargs={"compression": "tiff_lzw"})
+#plt.show()
+plt.savefig("plots/iqvc_plot.tiff", bbox_inches="tight", dpi=600, format="tiff", pil_kwargs={"compression": "tiff_lzw"})

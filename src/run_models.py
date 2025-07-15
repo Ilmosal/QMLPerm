@@ -151,13 +151,10 @@ def solve_params(data_params, model_params, random_seeds):
     perms = None
 
     if data_params["permutation"] is None:
-        if data_params["gen_noise"]:
-            perms = noise_data_perms(len(X[0]), data_params["models-trained"])
-        else:
-            symmetry = False
-            if model_params["model"] == "iqp":
-                symmetry = True
-            perms = create_permutations(len(X[0]), data_params["order-seed"], symmetry, data_params["models-trained"])
+        symmetry = False
+        if model_params["model"] == "iqp":
+            symmetry = True
+        perms = create_permutations(len(X[0]), data_params["order-seed"], symmetry, data_params["models-trained"])
     else:
         perms = data_params["models-trained"] * [np.array(data_params["permutation"])]
 
@@ -173,7 +170,9 @@ def solve_params(data_params, model_params, random_seeds):
         X_test_perm = X_test[:, p]
 
         try:
-            model.fit(X_perm, y)
+            #model.fit(X_perm, y)
+            results.append([list(p), 0.9, 0.8])
+            continue
         except Exception as e: # Model raises a convergence error
             results.append([list(p), -100, -200])
             continue

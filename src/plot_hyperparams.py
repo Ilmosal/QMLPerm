@@ -59,4 +59,5 @@ for i in range(len(binned_results)):
 plt.title("hidden-manifold")
 plt.xticks(ticks = np.arange(6), labels=plt_labels)
 
+#plt.show()
 plt.savefig("plots/hyperparams.tiff", bbox_inches="tight", dpi=600, format="tiff", pil_kwargs={"compression": "tiff_lzw"})
