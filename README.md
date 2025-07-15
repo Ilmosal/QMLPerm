@@ -10,4 +10,4 @@ requirements.txt file contains the important dependencies and versions. Use pyen
 ## Use
 The src folder contains run_experiments.py script, which can be used to run the related experiments. Running the script will create compute results into folders for all experiments of the article. Each experiment is formulated into its own function. The models come with optimized hyperparameters for learning_rate and n_layers. Most of the results have been searched using the original qml-benchmarks library separately from this program, but also a simple grid search routine in find_hyperparams function has been defined in the run_experiments.py file.
 
-The results of the experiments can be plotted using the various plot_scripts in the src folder and the p-values can be computed using the compute_welchs_test.py
+The results of the experiments can be plotted using the various plot scripts in the src folder and the p-values can be computed using the compute_welchs_test.py
