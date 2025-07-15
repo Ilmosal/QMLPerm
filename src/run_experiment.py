@@ -1,8 +1,10 @@
 from dask import delayed
 from dask import compute
 from dask.distributed import Client
+
 import copy
 import os
+import sys
 
 import json
 import numpy as np
@@ -58,12 +60,18 @@ def processDataset(dataset, model):
     if dataset['gen_noise']:
         required_seeds *= 4
 
+    np.random.seed(model['random_state'])
     seeds_for_models = np.random.randint(0, 9999999, size=required_seeds)
+
     return [dataset, model, solve_params(dataset, model, seeds_for_models)]
 
 def find_hyperparams(dataset, model, seeds_for_model):
     n_layers = [5, 10, 15]
     learning_rates = [0.001, 0.01, 0.1]
+
+    required_seeds = dataset['models-trained']
+    np.random.seed(model['random_state'])
+    seeds_for_models = np.random.randint(0, 9999999, size=required_seeds)
 
     best_acc =  -1.0
     best_model = None
@@ -97,9 +105,8 @@ def find_hyperparams(dataset, model, seeds_for_model):
 
     return model_results, best_acc, best_model
 
-def run_hyperparameter_experiment():
+def run_hyperparameter_experiment(models_trained):
     list_of_delayed_functions = []
-    models_trained = 1
     problem_params = [
     [
         {"dataset-seed": 1234, "dataset": "hidden-manifold", "order-seed": 1234, "models-trained": models_trained, "dimension": 15, "manifold_dimension": 6, "gen_noise": False, "n_train":300, "n_test":300, "permutation": [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]},
@@ -155,9 +162,8 @@ def run_hyperparameter_experiment():
     for r, i in zip(results[0], range(len(results[0]))):
         store_results(r, "exp_results_hyperparam", i+1)
 
-def run_diff_experiment():
+def run_diff_experiment(models_trained):
     list_of_delayed_functions = []
-    models_trained = 1
     problem_params = [
         [
             {"dataset-seed": 1234, "dataset": "hidden-manifold", "order-seed": 1234, "models-trained": models_trained, "dimension": 15, "manifold_dimension": 6, "gen_noise": False, "n_train":300, "n_test":300, "permutation": None},
@@ -238,9 +244,8 @@ def run_diff_experiment():
     for r in results[0]:
         store_results(r, "exp_results_diff")
 
-def run_adv_perm_experiment():
+def run_adv_perm_experiment(models_trained):
     list_of_delayed_functions = []
-    models_trained = 1
     problem_params = [
         [
             {"dataset-seed": 1234, "dataset": "hidden-manifold", "order-seed": 1234, "models-trained": models_trained, "dimension": 15, "manifold_dimension": 6, "gen_noise": True, "n_train":300, "n_test":300, "permutation": None},
@@ -280,9 +285,8 @@ def run_adv_perm_experiment():
     for r in results[0]:
         store_results(r, "exp_results_noise")
 
-def run_model_experiments():
+def run_model_experiments(models_trained):
     list_of_delayed_functions = []
-    models_trained = 1
     problem_params = [
             [
                 {"dataset-seed": 1234, "dataset": "linearly-separable", "order-seed": 1234, "models-trained": models_trained, "dimension": 15, "margin": 0.3, "gen_noise": False, "n_train":300, "n_test":300, "permutation": list(range(15))},
@@ -409,7 +413,22 @@ def run_model_experiments():
         store_results(r, "exp_results")
 
 if __name__ == "__main__":
-    run_model_experiments() # Run the experiments for Figures 5 and 6a
-    run_diff_experiment() # Run Figure 6b experiment
-    run_adv_perm_experiment() # Run Figure 7 experiment
-    run_hyperparameter_experiment() # Run Figure 6c experiment
+    try:
+        exp_id = int(sys.argv[1])
+        n_models = int(sys.argv[2])
+
+        if n_models <= 0 or n_models > 10000:
+            raise Exception("Invalid n_models: {0}".format(n_models))
+
+        match exp_id:
+            case 0:
+                run_model_experiments(n_models) # Run the experiments for Figures 5 and 6a
+            case 1:
+                run_diff_experiment(n_models) # Run Figure 6b experiment
+            case 2:
+                run_adv_perm_experiment(n_models) # Run Figure 7 experiment
+            case 3:
+                run_hyperparameter_experiment(n_models) # Run Figure 6c experiment
+    except Exception as e:
+        print("Faulty arguments for the program, give experiment id from 0 to 3 and then the amount of models")
+        print("Exception: {0}".format(e))
